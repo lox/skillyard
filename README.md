@@ -14,7 +14,7 @@
 
 `skillyard` is a small Go CLI for installing and updating Agent Skills from local folders, public GitHub repositories, and private Git repositories. It keeps an explicit lockfile of sources, subscriptions, commits, snapshots, and symlinks so global skill installs stay inspectable and reversible.
 
-It is designed for the workflow where a skill might live in a dedicated skills collection like `github:lox/agent-skills`, or inside an application repo like `~/Develop/slopcannon/skills/slopcannon`.
+It is designed for the workflow where a skill might live in a dedicated skills collection like `github:lox/agent-skills`, or inside an application repo like `github:lox/slack-cli` at `skills/slack`.
 
 ## Install
 
@@ -38,16 +38,16 @@ Create the default config:
 skillyard setup
 ```
 
-Preview installing a single-skill repo, such as Slopcannon's bundled skill:
+Preview installing a public application repo's bundled skill:
 
 ```bash
-skillyard subscribe ~/Develop/slopcannon --dry-run
+skillyard subscribe github:lox/slack-cli --dry-run
 ```
 
 Install it for every enabled configured agent:
 
 ```bash
-skillyard subscribe ~/Develop/slopcannon
+skillyard subscribe github:lox/slack-cli
 ```
 
 Subscribe to a full skills collection:
@@ -121,7 +121,7 @@ agent "custom" {
 If `--target` is omitted, `subscribe` installs to every enabled configured agent. Pass `--target` to narrow it:
 
 ```bash
-skillyard subscribe ~/Develop/slopcannon --target codex
+skillyard subscribe github:lox/slack-cli --target codex
 ```
 
 ## Sources and selection
@@ -135,7 +135,7 @@ skillyard subscribe github:lox/agent-skills --include '*'
 Application repositories usually want the bundled skill only. If the source has exactly one skill, the short form is enough:
 
 ```bash
-skillyard subscribe ~/Develop/slopcannon
+skillyard subscribe github:lox/slack-cli
 ```
 
 For multi-skill sources, be explicit:
@@ -160,8 +160,8 @@ skillyard setup
 skillyard setup --dry-run
 skillyard setup --force
 
-skillyard subscribe ~/Develop/slopcannon --dry-run
-skillyard subscribe ~/Develop/slopcannon
+skillyard subscribe github:lox/slack-cli --dry-run
+skillyard subscribe github:lox/slack-cli
 skillyard subscribe github:lox/agent-skills --include '*'
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
 

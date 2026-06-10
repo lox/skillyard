@@ -34,7 +34,7 @@ func TestNormalizeExplicitID(t *testing.T) {
 }
 
 func TestNormalizeLocalPath(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "slopcannon")
+	dir := filepath.Join(t.TempDir(), "slack-cli")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestNormalizeLocalPath(t *testing.T) {
 	if !filepath.IsAbs(ref.Path) {
 		t.Fatalf("path=%q, want absolute", ref.Path)
 	}
-	if !strings.HasPrefix(ref.ID, "slopcannon-") {
+	if !strings.HasPrefix(ref.ID, "slack-cli-") {
 		t.Fatalf("id=%q, want basename prefix", ref.ID)
 	}
 }

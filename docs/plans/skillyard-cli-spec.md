@@ -18,7 +18,7 @@ The core workflow is:
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
-skillyard subscribe ~/Develop/slopcannon --dry-run
+skillyard subscribe github:lox/slack-cli --dry-run
 skillyard sync
 skillyard list
 skillyard unsubscribe deploy-review --target codex
@@ -127,7 +127,7 @@ Source rules:
 - Local path sources link directly to the local path and are marked as mutable development sources.
 - Source IDs are stable slugs with a short hash suffix to avoid collisions.
 - Git source IDs are derived from the normalized URL.
-- Local source IDs are derived from the source path basename plus a hash of the resolved path, so `~/Develop/slopcannon` becomes a readable `slopcannon-<hash>` source id.
+- Local source IDs are derived from the source path basename plus a hash of the resolved path, so `~/Develop/slack-cli` becomes a readable `slack-cli-<hash>` source id.
 - Git source records include the last seen commit after clone or fetch.
 - Private repository access is delegated to `git`.
 
@@ -324,7 +324,7 @@ Adds or updates a subscription from one source into one or more global targets, 
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
-skillyard subscribe ~/Develop/slopcannon --dry-run
+skillyard subscribe github:lox/slack-cli --dry-run
 skillyard subscribe ~/Develop/lox-agent-skills --include slack --target amp
 ```
 
