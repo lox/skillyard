@@ -1,0 +1,4 @@
+interface:
+  display_name: "skillyard"
+  short_description: "Manage Codex and Amp skills with skillyard"
+  default_prompt: "Use $skillyard to inspect my installed skills and reconcile any skillyard subscriptions."
