@@ -29,14 +29,23 @@ Keep normal command output on stdout and progress or diagnostics on stderr when 
 
 ## Core Paths
 
-Default skillyard files:
+Resolve the actual paths with:
+
+```bash
+skillyard doctor
+```
+
+The path resolver respects these environment overrides:
 
 ```text
-~/.config/skillyard/config.hcl
-~/.config/skillyard/skillyard.lock.json
-~/.local/share/skillyard/sources/<source-id>/
-~/.cache/skillyard/
+SKILLYARD_CONFIG_DIR
+SKILLYARD_DATA_DIR
+SKILLYARD_CACHE_DIR
+XDG_DATA_HOME
+CODEX_HOME
 ```
+
+Do not assume Linux-style `~/.config` or `~/.cache` paths on every host. `skillyard` derives config and cache paths from Go's user directory APIs, and data paths from `SKILLYARD_DATA_DIR`, `XDG_DATA_HOME`, or `~/.local/share/skillyard`.
 
 Default agent targets:
 
@@ -50,7 +59,7 @@ amp   -> ~/.config/agents/skills
 ```hcl
 agent "codex" {
   enabled    = true
-  skills_dir = "$CODEX_HOME/skills"
+  skills_dir = "~/.codex/skills"
 }
 
 agent "amp" {
@@ -58,6 +67,8 @@ agent "amp" {
   skills_dir = "~/.config/agents/skills"
 }
 ```
+
+If `CODEX_HOME` is set, `skillyard setup` may emit `"$CODEX_HOME/skills"` for Codex. If it is not set, use `"~/.codex/skills"`; `skills_dir = "$CODEX_HOME/skills"` expands to `/skills` when the environment variable is empty.
 
 When `--target` is omitted, `subscribe` uses every enabled configured agent.
 
