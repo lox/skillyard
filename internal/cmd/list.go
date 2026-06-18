@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"text/tabwriter"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/lox/skillyard/internal/materialize"
 	"github.com/lox/skillyard/internal/state"
 )
@@ -77,29 +77,94 @@ func (c ListCmd) Run(ctx *Context) error {
 	if c.JSON {
 		return writeJSON(ctx.Out, out)
 	}
-	w := tabwriter.NewWriter(ctx.Out, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(w, "SUBSCRIPTIONS")
-	_, _ = fmt.Fprintln(w, "TARGET\tSOURCE\tINCLUDE\tEXCLUDE")
+	styles := newOutputStyles(ctx.Out)
+	subscriptions := make([][]string, 0, len(out.Subscriptions))
 	for _, sub := range out.Subscriptions {
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%v\t%v\n", sub.Target, sub.Source, sub.Include, sub.Exclude)
+		subscriptions = append(subscriptions, []string{
+			sub.Target,
+			sub.Source,
+			selectionText(sub.Include, "auto"),
+			selectionText(sub.Exclude, "-"),
+		})
 	}
-	_, _ = fmt.Fprintln(w)
-	_, _ = fmt.Fprintln(w, "MANAGED")
-	_, _ = fmt.Fprintln(w, "SKILL\tTARGET\tSOURCE\tSTATUS\tPATH")
-	for _, install := range out.Installs {
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", install.Skill, install.Target, install.Source, install.Status, install.LinkPathResolved)
-	}
-	_, _ = fmt.Fprintln(w)
-	_, _ = fmt.Fprintln(w, "UNMANAGED")
-	_, _ = fmt.Fprintln(w, "SKILL\tTARGET\tKIND\tPATH\tLINK_TARGET")
-	for _, item := range out.Unmanaged {
-		linkTarget := item.LinkTarget
-		if linkTarget == "" {
-			linkTarget = "-"
+	renderSectionTable(ctx.Out, styles, "Subscriptions", []string{"TARGET", "SOURCE", "INCLUDE", "EXCLUDE"}, subscriptions, func(_ int, col int, value string) lipgloss.Style {
+		switch col {
+		case 1:
+			return styles.info
+		case 2:
+			if value == "auto" {
+				return styles.muted
+			}
+		case 3:
+			return mutedIfDash(styles, value)
 		}
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", item.Skill, item.Target, item.Kind, item.Path, linkTarget)
+		return styles.cell
+	})
+	_, _ = fmt.Fprintln(ctx.Out)
+
+	managed := make([][]string, 0, len(out.Installs))
+	for _, install := range out.Installs {
+		managed = append(managed, []string{install.Skill, install.Target, install.Source, string(install.Status), install.LinkPathResolved})
 	}
-	return w.Flush()
+	renderSectionTable(ctx.Out, styles, "Managed", []string{"SKILL", "TARGET", "SOURCE", "STATUS", "PATH"}, managed, func(_ int, col int, value string) lipgloss.Style {
+		switch col {
+		case 2:
+			return styles.info
+		case 3:
+			return installStatusStyle(styles, value)
+		case 4:
+			return styles.muted
+		default:
+			return styles.cell
+		}
+	})
+	_, _ = fmt.Fprintln(ctx.Out)
+
+	unmanagedRows := make([][]string, 0, len(out.Unmanaged))
+	for _, item := range out.Unmanaged {
+		unmanagedRows = append(unmanagedRows, []string{item.Skill, item.Target, item.Kind, item.Path, dashIfEmpty(item.LinkTarget)})
+	}
+	renderSectionTable(ctx.Out, styles, "Unmanaged", []string{"SKILL", "TARGET", "KIND", "PATH", "LINK_TARGET"}, unmanagedRows, func(_ int, col int, value string) lipgloss.Style {
+		switch col {
+		case 2:
+			return unmanagedKindStyle(styles, value)
+		case 3, 4:
+			return mutedIfDash(styles, value)
+		default:
+			return styles.cell
+		}
+	})
+	return nil
+}
+
+func installStatusStyle(styles outputStyles, status string) lipgloss.Style {
+	switch materialize.Status(status) {
+	case materialize.StatusLinked:
+		return styles.success
+	case materialize.StatusMutableSource:
+		return styles.info
+	case materialize.StatusDrifted:
+		return styles.warn
+	case materialize.StatusMissingTarget, materialize.StatusWrongTarget, materialize.StatusMissingSource, materialize.StatusInvalidSkill:
+		return styles.danger
+	default:
+		return styles.cell
+	}
+}
+
+func unmanagedKindStyle(styles outputStyles, kind string) lipgloss.Style {
+	switch kind {
+	case "broken-symlink":
+		return styles.danger
+	case "symlink":
+		return styles.info
+	case "dir":
+		return styles.accent
+	case "file":
+		return styles.muted
+	default:
+		return styles.cell
+	}
 }
 
 func listUnmanaged(ctx *Context, lock state.Lock) ([]unmanagedOutput, error) {

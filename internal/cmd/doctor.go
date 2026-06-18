@@ -3,7 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
+	"strconv"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 type DoctorCmd struct {
@@ -64,20 +67,59 @@ func (c DoctorCmd) Run(ctx *Context) error {
 	if c.JSON {
 		return writeJSON(ctx.Out, out)
 	}
-	w := tabwriter.NewWriter(ctx.Out, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(w, "AGENTS")
-	_, _ = fmt.Fprintln(w, "NAME\tENABLED\tSKILLS_DIR\tEXISTS")
+	styles := newOutputStyles(ctx.Out)
+	agentRows := make([][]string, 0, len(out.Agents))
 	for _, a := range out.Agents {
-		_, _ = fmt.Fprintf(w, "%s\t%t\t%s\t%t\n", a.Name, a.Enabled, a.SkillsDir, a.Exists)
+		agentRows = append(agentRows, []string{a.Name, boolText(a.Enabled), a.SkillsDir, boolText(a.Exists)})
 	}
-	_, _ = fmt.Fprintln(w)
-	_, _ = fmt.Fprintf(w, "Skillyard config dir:\t%s\t%t\n", out.ConfigDir, exists(out.ConfigDir))
-	_, _ = fmt.Fprintf(w, "Skillyard config file:\t%s\t%t\n", out.ConfigPath, out.ConfigExists)
-	_, _ = fmt.Fprintf(w, "Skillyard sources:\t%s\t%t\n", out.SourceDir, exists(out.SourceDir))
-	_, _ = fmt.Fprintf(w, "Lockfile:\t%s\t%t\n", out.LockPath, out.LockExists)
-	_, _ = fmt.Fprintf(w, "Git:\t%s\t\n", out.GitVersion)
-	_, _ = fmt.Fprintf(w, "Managed installs:\t%d\t\n", out.ManagedInstallCount)
-	return w.Flush()
+	renderSectionTable(ctx.Out, styles, "Agents", []string{"NAME", "ENABLED", "SKILLS_DIR", "EXISTS"}, agentRows, func(_ int, col int, value string) lipgloss.Style {
+		switch col {
+		case 1:
+			return boolStyle(styles, value)
+		case 3:
+			return existsStyle(styles, value)
+		case 2:
+			return styles.muted
+		default:
+			return styles.cell
+		}
+	})
+	_, _ = fmt.Fprintln(ctx.Out)
+
+	gitStatus := "ok"
+	if out.GitVersion == "" || strings.HasPrefix(out.GitVersion, "unavailable:") {
+		gitStatus = "unavailable"
+	}
+	pathRows := [][]string{
+		{"Config dir", out.ConfigDir, boolText(exists(out.ConfigDir))},
+		{"Config file", out.ConfigPath, boolText(out.ConfigExists)},
+		{"Sources", out.SourceDir, boolText(exists(out.SourceDir))},
+		{"Lockfile", out.LockPath, boolText(out.LockExists)},
+		{"Git", out.GitVersion, gitStatus},
+		{"Managed installs", strconv.Itoa(out.ManagedInstallCount), "-"},
+	}
+	renderSectionTable(ctx.Out, styles, "State", []string{"ITEM", "VALUE", "STATUS"}, pathRows, func(_ int, col int, value string) lipgloss.Style {
+		switch col {
+		case 0:
+			return styles.cell
+		case 1:
+			return styles.muted
+		case 2:
+			switch value {
+			case "yes", "ok":
+				return styles.success
+			case "no":
+				return styles.warn
+			case "unavailable":
+				return styles.warn
+			default:
+				return mutedIfDash(styles, value)
+			}
+		default:
+			return styles.cell
+		}
+	})
+	return nil
 }
 
 func exists(path string) bool {

@@ -30,8 +30,9 @@ func TestSetupCreatesConfig(t *testing.T) {
 			t.Fatalf("config missing %q:\n%s", want, text)
 		}
 	}
-	if !strings.Contains(stdout.String(), "Wrote ") {
-		t.Fatalf("stdout=%q, want wrote message", stdout.String())
+	stdoutText := plainOutput(stdout.String())
+	if !strings.Contains(stdoutText, "Wrote ") {
+		t.Fatalf("stdout=%q, want wrote message", stdoutText)
 	}
 }
 
@@ -58,8 +59,9 @@ func TestSetupDoesNotOverwriteExistingConfigWithoutForce(t *testing.T) {
 	if string(data) != string(original) {
 		t.Fatalf("config overwritten:\n%s", data)
 	}
-	if !strings.Contains(stdout.String(), "Config already exists") {
-		t.Fatalf("stdout=%q, want existing message", stdout.String())
+	stdoutText := plainOutput(stdout.String())
+	if !strings.Contains(stdoutText, "Config already exists") {
+		t.Fatalf("stdout=%q, want existing message", stdoutText)
 	}
 }
 
@@ -97,8 +99,9 @@ func TestSetupDryRunDoesNotWriteConfig(t *testing.T) {
 	if _, err := os.Stat(ctx.Paths.ConfigPath); !os.IsNotExist(err) {
 		t.Fatalf("config exists or errored after dry-run: %v", err)
 	}
-	if !strings.Contains(stdout.String(), `agent "codex"`) {
-		t.Fatalf("stdout=%q, want generated content", stdout.String())
+	stdoutText := plainOutput(stdout.String())
+	if !strings.Contains(stdoutText, `agent "codex"`) {
+		t.Fatalf("stdout=%q, want generated content", stdoutText)
 	}
 }
 

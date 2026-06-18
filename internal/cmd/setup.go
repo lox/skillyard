@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/lox/skillyard/internal/agent"
 	"github.com/lox/skillyard/internal/config"
 	"github.com/lox/skillyard/internal/state"
@@ -92,24 +92,34 @@ func setupAgents(registry agent.Registry) []setupAgent {
 }
 
 func printSetup(out io.Writer, result setupOutput) {
+	styles := newOutputStyles(out)
 	switch {
 	case result.DryRun:
-		_, _ = fmt.Fprintf(out, "Would write %s\n", result.ConfigPath)
+		_, _ = fmt.Fprintf(out, "%s %s\n", styles.info.Render("Would write"), styles.muted.Render(result.ConfigPath))
 	case result.Wrote:
-		_, _ = fmt.Fprintf(out, "Wrote %s\n", result.ConfigPath)
+		_, _ = fmt.Fprintf(out, "%s %s\n", styles.success.Render("Wrote"), styles.muted.Render(result.ConfigPath))
 	case result.ExistsBefore:
-		_, _ = fmt.Fprintf(out, "Config already exists: %s\n", result.ConfigPath)
+		_, _ = fmt.Fprintf(out, "%s %s\n", styles.warn.Render("Config already exists:"), styles.muted.Render(result.ConfigPath))
 	default:
-		_, _ = fmt.Fprintf(out, "No changes: %s\n", result.ConfigPath)
+		_, _ = fmt.Fprintf(out, "%s %s\n", styles.muted.Render("No changes:"), styles.muted.Render(result.ConfigPath))
 	}
 	_, _ = fmt.Fprintln(out)
-	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(w, "AGENTS")
-	_, _ = fmt.Fprintln(w, "NAME\tENABLED\tSKILLS_DIR\tEXISTS")
+	rows := make([][]string, 0, len(result.Agents))
 	for _, a := range result.Agents {
-		_, _ = fmt.Fprintf(w, "%s\t%t\t%s\t%t\n", a.Name, a.Enabled, a.SkillsDir, a.Exists)
+		rows = append(rows, []string{a.Name, boolText(a.Enabled), a.SkillsDir, boolText(a.Exists)})
 	}
-	_ = w.Flush()
+	renderSectionTable(out, styles, "Agents", []string{"NAME", "ENABLED", "SKILLS_DIR", "EXISTS"}, rows, func(_ int, col int, value string) lipgloss.Style {
+		switch col {
+		case 1:
+			return boolStyle(styles, value)
+		case 3:
+			return existsStyle(styles, value)
+		case 2:
+			return styles.muted
+		default:
+			return styles.cell
+		}
+	})
 	if result.DryRun && result.Content != "" {
 		_, _ = fmt.Fprintln(out)
 		_, _ = fmt.Fprint(out, result.Content)

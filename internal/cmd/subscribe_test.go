@@ -196,11 +196,13 @@ func TestSubscribeHumanOutputWritesWarningsToStderr(t *testing.T) {
 	if err := cmd.Run(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stderr.String(), "warning: has-scripts") {
-		t.Fatalf("stderr=%q, want has-scripts warning", stderr.String())
+	stderrText := plainOutput(stderr.String())
+	stdoutText := plainOutput(stdout.String())
+	if !strings.Contains(stderrText, "warning: has-scripts") {
+		t.Fatalf("stderr=%q, want has-scripts warning", stderrText)
 	}
-	if strings.Contains(stdout.String(), "warning:") {
-		t.Fatalf("stdout contains warning: %q", stdout.String())
+	if strings.Contains(stdoutText, "warning:") {
+		t.Fatalf("stdout contains warning: %q", stdoutText)
 	}
 }
 
