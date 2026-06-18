@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="skillyard logo" width="280">
+  <img src="assets/logo.png" alt="skillyard hand-drawn workshop yard icon" width="280">
 </p>
 
 <h1 align="center">skillyard</h1>
