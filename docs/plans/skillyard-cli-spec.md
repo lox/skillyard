@@ -358,22 +358,22 @@ Rules:
 Shows recorded subscriptions, managed installs with computed link status, and unmanaged entries currently present in Codex and Amp skill roots.
 
 ```text
-SUBSCRIPTIONS
+Subscriptions
 TARGET SOURCE                   INCLUDE EXCLUDE
 codex  github:lox/agent-skills  *       -
 amp    github:lox/agent-skills  *       consulting-librarian
 
-MANAGED
+Managed
 SKILL   TARGET SOURCE                         STATUS          PATH
-slack   codex  github:lox/agent-skills        linked          ~/.codex/skills/slack
-slack   amp    github:lox/agent-skills        linked          ~/.config/agents/skills/slack
-notion  codex  git@github.com:org/private...  missing-target  ~/.codex/skills/notion
+slack   codex  github:lox/agent-skills        linked          /Users/me/.codex/skills/slack
+slack   amp    github:lox/agent-skills        linked          /Users/me/.config/agents/skills/slack
+notion  codex  git@github.com:org/private...  missing-target  /Users/me/.codex/skills/notion
 
-UNMANAGED
-SKILL          TARGET KIND            PATH                                LINK_TARGET
-local-review   codex  symlink         ~/.codex/skills/local-review        ~/Develop/skills/local-review
-old-skill      amp    dir             ~/.config/agents/skills/old-skill   -
-broken-skill   codex  broken-symlink  ~/.codex/skills/broken-skill        /missing/path
+Unmanaged
+SKILL          TARGET KIND            PATH                                      LINK_TARGET
+local-review   codex  symlink         /Users/me/.codex/skills/local-review      /Users/me/Develop/skills/local-review
+old-skill      amp    dir             /Users/me/.config/agents/skills/old-skill -
+broken-skill   codex  broken-symlink  /Users/me/.codex/skills/broken-skill      /missing/path
 ```
 
 Statuses:
@@ -388,7 +388,7 @@ Statuses:
 
 Unmanaged entries are filesystem entries in a target skill root whose basename is not recorded as a managed install for that target. Hidden entries and `.skillyard` temporary links are ignored. `kind` is one of `symlink`, `broken-symlink`, `dir`, `file`, or `other`.
 
-`list --json` emits subscriptions, managed install records with computed status, and unmanaged entries with paths and link targets.
+Empty human-output sections render as `none`. `list --json` emits subscriptions, managed install records with computed status, and unmanaged entries with paths and link targets.
 
 ### `skillyard sync`
 
