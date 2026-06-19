@@ -89,8 +89,8 @@ func TestListHumanOutputShowsUnmanagedSectionWithPaths(t *testing.T) {
 	if err := (ListCmd{}).Run(ctx); err != nil {
 		t.Fatal(err)
 	}
-	text := stdout.String()
-	for _, want := range []string{"UNMANAGED", "local-dir", rootForContext(t, ctx, agent.Codex)} {
+	text := plainOutput(stdout.String())
+	for _, want := range []string{"Unmanaged", "local-dir", rootForContext(t, ctx, agent.Codex)} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("list output missing %q:\n%s", want, text)
 		}

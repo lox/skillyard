@@ -203,21 +203,21 @@ Useful flags:
 Shows subscriptions, managed installs, and unmanaged entries in configured skill roots.
 
 ```text
-SUBSCRIPTIONS
+Subscriptions
 TARGET  SOURCE                   INCLUDE  EXCLUDE
-codex   github-com-lox-skills    [*]      []
+codex   github-com-lox-skills    *        -
 
-MANAGED
+Managed
 SKILL       TARGET  SOURCE                   STATUS          PATH
 slack       codex   github-com-lox-skills    linked          /Users/me/.codex/skills/slack
 
-UNMANAGED
+Unmanaged
 SKILL       TARGET  KIND            PATH                                  LINK_TARGET
 old-skill   codex   dir             /Users/me/.codex/skills/old-skill     -
 local-dev   codex   symlink         /Users/me/.codex/skills/local-dev     /Users/me/Develop/app/skills/local-dev
 ```
 
-Unmanaged entries are useful because they are the things that can affect agent behavior or block a future install.
+Empty sections render as `none`. Unmanaged entries are useful because they are the things that can affect agent behavior or block a future install.
 
 ### `sync`
 
