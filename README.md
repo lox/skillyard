@@ -18,7 +18,16 @@ It is designed for the workflow where a skill might live in a dedicated skills c
 
 ## Install
 
-From a local checkout:
+From the latest published GitHub release:
+
+```bash
+mise use -g github:lox/skillyard
+```
+
+That installs `skillyard` globally and puts it on your `PATH` through mise shims.
+It requires a published release; use the local checkout path below before the first release exists.
+
+From a local checkout during development:
 
 ```bash
 mise run install
@@ -377,4 +386,27 @@ SKILLYARD_CACHE_DIR="$tmp/cache" \
 CODEX_HOME="$tmp/codex-home" \
 HOME="$tmp/home" \
   go run ./cmd/skillyard setup --dry-run
+```
+
+## Release flow
+
+Releases follow the same GitHub release pattern as `lox/slack-cli`: a local mise task creates the next `v*` tag, then GitHub Actions runs GoReleaser for the published artifacts.
+
+From an up-to-date `main` checkout:
+
+```bash
+git fetch --tags origin
+git pull --ff-only
+mise run release
+```
+
+`mise run release` runs `mise run check`, uses `svu` to choose the next semantic version from conventional commits, refuses to continue if no version bump is detected, creates the tag, and pushes it to `origin`.
+
+The pushed tag triggers `.github/workflows/release.yml`. GoReleaser reads `.goreleaser.yml` and publishes Linux, macOS, and Windows archives for amd64 and arm64, `checksums.txt`, and the `lox/tap/skillyard` Homebrew cask.
+
+After the release is published, verify the consumer install path:
+
+```bash
+mise use -g github:lox/skillyard
+skillyard --version
 ```
