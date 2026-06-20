@@ -29,6 +29,7 @@ archives:
 
 homebrew_casks:
   - name: skillyard
+    skip_upload: true
     repository:
       owner: lox
       name: homebrew-tap

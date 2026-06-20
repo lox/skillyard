@@ -402,7 +402,7 @@ mise run release
 
 `mise run release` runs `mise run check`, uses `svu` to choose the next semantic version from conventional commits, refuses to continue if no version bump is detected, creates the tag, and pushes it to `origin`.
 
-The pushed tag triggers `.github/workflows/release.yml`. GoReleaser reads `.goreleaser.yml` and publishes Linux, macOS, and Windows archives for amd64 and arm64, `checksums.txt`, and the `lox/tap/skillyard` Homebrew cask.
+The pushed tag triggers `.github/workflows/release.yml`. GoReleaser reads `.goreleaser.yml` and publishes Linux, macOS, and Windows archives for amd64 and arm64 plus `checksums.txt`.
 
 After the release is published, verify the consumer install path:
 
