@@ -144,6 +144,7 @@ Discovery rules:
 - The `skills/` child directory is treated as a skill container when present.
 - `skills/<category>/` child directories are treated as nested skill containers.
 - `.agents/skills/` and `.claude/skills/` are treated as skill containers when present.
+- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` can declare explicit skill paths.
 - Hidden directories are ignored except the explicit `.agents/skills/` and `.claude/skills/` containers; `.git` is ignored.
 - `SKILL.md` must have YAML frontmatter.
 - Frontmatter must include `name` and `description`.
@@ -349,6 +350,8 @@ slack  yes          skills/slack  -         has-scripts  Work with Slack message
 
 `discover --full-depth` recursively searches all subdirectories for `SKILL.md`, skipping `.git` and `node_modules`. It is intended for read-only inspection of unusual repositories; subscription reconciliation uses the standard discovery containers so desired state remains predictable.
 
+Plugin manifests are read from `.claude-plugin/` and `.codex-plugin/`. Single-plugin manifests may declare `skills`, and marketplace manifests may declare `metadata.pluginRoot`, `plugins[].source`, and `plugins[].skills`. Manifest-declared paths must stay inside the source root.
+
 ### `skillyard subscribe`
 
 Adds or updates a subscription from one source into one or more global targets, then reconciles that desired state unless `--dry-run` is set.
@@ -528,7 +531,7 @@ Scope:
 - Clone Git sources with the system `git` binary.
 - Create immutable source snapshots for resolved Git commits.
 - Support local path sources.
-- Discover skill directories from root, direct children, `skills/`, `skills/<category>/`, `.agents/skills/`, and `.claude/skills/`.
+- Discover skill directories from root, direct children, `skills/`, `skills/<category>/`, `.agents/skills/`, `.claude/skills/`, and plugin manifests.
 - Parse and validate `SKILL.md` frontmatter.
 - Implement `setup`, `subscribe`, `list`, `sync`, `unsubscribe`, `unlink`, and `doctor`.
 - Implement `discover` for read-only source inspection.

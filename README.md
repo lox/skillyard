@@ -77,7 +77,7 @@ skillyard sync
 ## What it does
 
 - reads skills from local paths, GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and `file://` Git URLs
-- discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, and `.claude/skills/<name>`
+- discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, `.claude/skills/<name>`, and plugin-declared skill paths
 - inspects source skills, validation findings, and warnings without installing
 - validates `SKILL.md` frontmatter before linking
 - symlinks selected skills into configured agent skill directories
@@ -206,6 +206,8 @@ skillyard discover ./repo --full-depth
 ```
 
 Use `--full-depth` when you want read-only inspection to find every nested `SKILL.md` under a source, not only the standard skill container layouts.
+
+`skillyard` also reads `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` when they declare explicit skill paths.
 
 ### `subscribe`
 

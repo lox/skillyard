@@ -2,6 +2,7 @@ package skill
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -139,6 +140,11 @@ func candidates(root string, opts DiscoveryOptions) ([]string, error) {
 		return nil, err
 	}
 	appendCandidates(&out, seen, nested)
+	manifest, err := manifestSkillCandidates(root)
+	if err != nil {
+		return nil, err
+	}
+	appendCandidates(&out, seen, manifest)
 	sort.Strings(out)
 	return out, nil
 }
@@ -218,6 +224,130 @@ func recursiveCandidates(root string) ([]string, error) {
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+func manifestSkillCandidates(root string) ([]string, error) {
+	var out []string
+	for _, pluginDir := range []string{".claude-plugin", ".codex-plugin"} {
+		dir := filepath.Join(root, pluginDir)
+		candidates, err := pluginManifestCandidates(root, filepath.Join(dir, "plugin.json"))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, candidates...)
+		candidates, err = marketplaceManifestCandidates(root, filepath.Join(dir, "marketplace.json"))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, candidates...)
+	}
+	return out, nil
+}
+
+type pluginManifest struct {
+	Skills []string `json:"skills"`
+}
+
+type marketplaceManifest struct {
+	Metadata struct {
+		PluginRoot string `json:"pluginRoot"`
+	} `json:"metadata"`
+	Plugins []marketplacePlugin `json:"plugins"`
+}
+
+type marketplacePlugin struct {
+	Source string   `json:"source"`
+	Skills []string `json:"skills"`
+}
+
+func pluginManifestCandidates(root, path string) ([]string, error) {
+	var manifest pluginManifest
+	if ok, err := readJSONIfExists(path, &manifest); err != nil || !ok {
+		return nil, err
+	}
+	return manifestSkillPaths(path, root, root, manifest.Skills)
+}
+
+func marketplaceManifestCandidates(root, path string) ([]string, error) {
+	var manifest marketplaceManifest
+	if ok, err := readJSONIfExists(path, &manifest); err != nil || !ok {
+		return nil, err
+	}
+	pluginRoot, ok := safeRelativePath(manifest.Metadata.PluginRoot)
+	if !ok {
+		return nil, fmt.Errorf("%s: metadata.pluginRoot escapes source root", path)
+	}
+	var out []string
+	for _, plugin := range manifest.Plugins {
+		source, ok := safeRelativePath(plugin.Source)
+		if !ok {
+			return nil, fmt.Errorf("%s: plugin source %q escapes source root", path, plugin.Source)
+		}
+		base := filepath.Join(root, pluginRoot, source)
+		candidates, err := manifestSkillPaths(path, root, base, plugin.Skills)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, candidates...)
+	}
+	return out, nil
+}
+
+func readJSONIfExists(path string, out any) (bool, error) {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read plugin manifest %s: %w", path, err)
+	}
+	if err := json.Unmarshal(data, out); err != nil {
+		return false, fmt.Errorf("parse plugin manifest %s: %w", path, err)
+	}
+	return true, nil
+}
+
+func manifestSkillPaths(manifestPath, root, base string, values []string) ([]string, error) {
+	var out []string
+	for _, value := range values {
+		rel, ok := safeRelativePath(value)
+		if !ok {
+			return nil, fmt.Errorf("%s: skill path %q escapes source root", manifestPath, value)
+		}
+		if rel == "" {
+			continue
+		}
+		path := filepath.Join(base, rel)
+		if !pathInside(root, path) {
+			return nil, fmt.Errorf("%s: skill path %q escapes source root", manifestPath, value)
+		}
+		if hasSkillMD(path) {
+			out = append(out, path)
+		}
+	}
+	return out, nil
+}
+
+func safeRelativePath(value string) (string, bool) {
+	if value == "" {
+		return "", true
+	}
+	if filepath.IsAbs(value) {
+		return "", false
+	}
+	clean := filepath.Clean(value)
+	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return clean, true
+}
+
+func pathInside(root, path string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+	return rel == "." || rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func appendCandidates(out *[]string, seen map[string]bool, candidates []string) {

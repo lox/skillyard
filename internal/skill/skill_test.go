@@ -3,6 +3,7 @@ package skill
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -66,6 +67,60 @@ func TestDiscoverWithFullDepthFindsArbitraryNestedSkills(t *testing.T) {
 	}
 	if skills[0].Name != "demo" || skills[0].RelPath != "examples/deep/demo" {
 		t.Fatalf("skill=%+v, want demo at examples/deep/demo", skills[0])
+	}
+}
+
+func TestDiscoverPluginManifestSkills(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, filepath.Join(root, "plugin-skills", "review"), "review", "Review")
+	writeTestSkill(t, filepath.Join(root, "plugins", "deploy", "resources", "deploy-review"), "deploy-review", "Deploy")
+	writeFile(t, filepath.Join(root, ".claude-plugin", "plugin.json"), `{
+  "name": "review-plugin",
+  "skills": ["plugin-skills/review"]
+}`)
+	writeFile(t, filepath.Join(root, ".codex-plugin", "marketplace.json"), `{
+  "metadata": { "pluginRoot": "plugins" },
+  "plugins": [
+    {
+      "name": "deploy",
+      "source": "deploy",
+      "skills": ["resources/deploy-review"]
+    }
+  ]
+}`)
+
+	skills, err := Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, s := range skills {
+		got[s.Name] = s.RelPath
+	}
+	want := map[string]string{
+		"review":        "plugin-skills/review",
+		"deploy-review": "plugins/deploy/resources/deploy-review",
+	}
+	for name, rel := range want {
+		if got[name] != rel {
+			t.Fatalf("skill %q rel=%q, want %q; all=%+v", name, got[name], rel, skills)
+		}
+	}
+}
+
+func TestDiscoverPluginManifestRejectsEscapingPath(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".codex-plugin", "plugin.json"), `{
+  "name": "bad-plugin",
+  "skills": ["../outside"]
+}`)
+
+	_, err := Discover(root)
+	if err == nil {
+		t.Fatal("expected escaping plugin skill path error")
+	}
+	if !strings.Contains(err.Error(), "escapes source root") {
+		t.Fatalf("err=%v, want escape error", err)
 	}
 }
 
@@ -145,6 +200,16 @@ func writeTestSkill(t *testing.T, path, name, description string) {
 	}
 	data := "---\nname: " + name + "\ndescription: " + description + "\n---\n"
 	if err := os.WriteFile(filepath.Join(path, "SKILL.md"), []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeFile(t *testing.T, path, data string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
