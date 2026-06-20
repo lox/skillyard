@@ -20,6 +20,7 @@ skillyard use github:lox/agent-skills --include check-pr-description
 skillyard export --target codex > skillyard.lock.json
 skillyard apply skillyard.lock.json --target codex --dry-run
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
+skillyard subscribe github:lox/agent-skills --include '*' --ref v1.2.3 --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
 skillyard subscribe github:lox/slack-cli --dry-run
@@ -57,6 +58,7 @@ Manual linking works for a single local repo, but it becomes fragile with multip
 - Inspect source skills without changing subscriptions, installed links, or lockfile state.
 - Print one selected skill's instructions without installing it.
 - Export and apply portable desired state for sources and subscriptions.
+- Pin Git sources to a branch, tag, or commit when requested.
 - Install by symlinking selected skill directories into agent roots.
 - Preserve Codex and Amp as explicit targets.
 - Record ownership state for safe list, unsubscribe, and unlink behavior.
@@ -131,6 +133,8 @@ Source rules:
 - `github:owner/repo` normalizes to `https://github.com/owner/repo.git`.
 - Git sources clone into `~/.local/share/skillyard/sources/<source-id>/repo`.
 - Git source snapshots live under `~/.local/share/skillyard/sources/<source-id>/snapshots/<commit>/`.
+- Git sources can set `--ref <branch|tag|commit>` to track a non-default branch, immutable tag, or commit.
+- Source IDs include the Git ref when one is set, so the same repository can be subscribed at multiple refs.
 - Local path sources link directly to the local path and are marked as mutable development sources.
 - Source IDs are stable slugs with a short hash suffix to avoid collisions.
 - Git source IDs are derived from the normalized URL.
@@ -258,6 +262,7 @@ Shape:
       "input": "github:lox/agent-skills",
       "type": "git",
       "url": "https://github.com/lox/agent-skills.git",
+      "ref": "main",
       "checkout_path": "~/.local/share/skillyard/sources/github-com-lox-agent-skills-a1b2c3d4/repo",
       "last_seen_commit": "0123456789abcdef0123456789abcdef01234567"
     },
@@ -299,6 +304,7 @@ Lockfile rules:
 
 - Store display expressions for default target roots.
 - Store resolved target roots used at install time so `list`, `unsubscribe`, and `unlink` do not change behavior when environment variables change.
+- Store requested Git refs on source records; omitted refs track the remote default branch.
 - Store each install's resolved source commit and snapshot path; source-level `last_seen_commit` is cache metadata, not proof that every target is installed at that commit.
 - Store managed source checkout and snapshot paths under `~/.local/share/skillyard`.
 - Store local path sources with both the user-provided path and cleaned absolute path.
@@ -337,14 +343,15 @@ skillyard discover github:lox/agent-skills
 skillyard discover github:lox/slack-cli --json
 skillyard discover ~/Develop/lox-agent-skills
 skillyard discover ./repo --full-depth
+skillyard discover github:lox/agent-skills --ref v1.2.3
 ```
 
 Human output includes source metadata and candidate skills:
 
 ```text
 Source
-ID                        TYPE  COMMIT        URL                                      ROOT
-github-com-lox-skills...  git   0123456789ab  https://github.com/lox/skills.git        /Users/me/.cache/skillyard/source-.../repo
+ID                        TYPE  REF     COMMIT        URL                                      ROOT
+github-com-lox-skills...  git   v1.2.3  0123456789ab  https://github.com/lox/skills.git        /Users/me/.cache/skillyard/source-.../repo
 
 Skills
 NAME   INSTALLABLE  PATH          FINDINGS  WARNINGS     DESCRIPTION
@@ -352,6 +359,8 @@ slack  yes          skills/slack  -         has-scripts  Work with Slack message
 ```
 
 `discover --json` emits source metadata plus each candidate skill's name, description, path, installability, findings, and warnings.
+
+`discover --ref` inspects a Git branch, tag, or commit instead of the remote default branch.
 
 `discover --full-depth` recursively searches all subdirectories for `SKILL.md`, skipping `.git` and `node_modules`. It is intended for read-only inspection of unusual repositories; subscription reconciliation uses the standard discovery containers so desired state remains predictable.
 
@@ -363,11 +372,13 @@ Prints one selected skill's `SKILL.md` content to stdout without changing subscr
 
 ```bash
 skillyard use github:lox/agent-skills --include check-pr-description
+skillyard use github:lox/agent-skills --include check-pr-description --ref v1.2.3
 skillyard use ./skills/review
 ```
 
 Rules:
 
+- `--ref` reads from a Git branch, tag, or commit instead of the remote default branch.
 - If `--include` is omitted and the source has exactly one discovered skill, print that skill.
 - If the source has zero skills, multiple skills, no matching include, or an include pattern matches multiple skills, fail with guidance to select exactly one skill.
 - If the selected skill has validation findings, fail instead of printing instructions.
@@ -375,7 +386,7 @@ Rules:
 
 ### `skillyard export`
 
-Writes portable desired state for sources and subscriptions to stdout. Realized install records, snapshot paths, checkout paths, and last-seen commits are omitted.
+Writes portable desired state for sources and subscriptions to stdout. Realized install records, snapshot paths, checkout paths, and last-seen commits are omitted. Git refs are preserved.
 
 ```bash
 skillyard export > skillyard.lock.json
@@ -386,7 +397,7 @@ Rules:
 
 - `--target` filters subscriptions to one configured target.
 - Only sources referenced by exported subscriptions are included.
-- Git sources keep their input, type, and URL; machine-local checkout and last-seen commit fields are omitted.
+- Git sources keep their input, type, URL, and ref; machine-local checkout and last-seen commit fields are omitted.
 
 ### `skillyard apply`
 
@@ -411,6 +422,7 @@ Adds or updates a subscription from one source into one or more global targets, 
 
 ```bash
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
+skillyard subscribe github:lox/agent-skills --include '*' --ref v1.2.3 --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
 skillyard subscribe github:lox/slack-cli --dry-run
@@ -424,6 +436,7 @@ Flags:
 --exclude <pattern>   exclude matching skills after includes; repeatable
 --target <name>       install target; repeatable; defaults to all enabled configured agents
 --name <source-id>    source id override
+--ref <ref>           Git branch, tag, or commit to track
 --force               replace unmanaged symlinks and drifted managed links
 --dry-run             show clone/link plan without writing target links or lockfile
 --json                machine-readable result
@@ -433,6 +446,8 @@ Rules:
 
 - If `--target` is omitted, default to all enabled configured agents.
 - If `--target` is provided, it must name an enabled configured agent.
+- `--ref` is valid only for Git sources.
+- When `--ref` is set, sync fetches refs and checks out the requested branch, tag, or commit before snapshotting.
 - If `--include` is omitted and the source has exactly one discovered skill, subscribe to that skill by name.
 - If `--include` is omitted and the source has zero or multiple discovered skills, fail with guidance to pass `--include <skill>` or `--include '*'`.
 - Evaluate includes first, then excludes.

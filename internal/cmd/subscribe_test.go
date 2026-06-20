@@ -218,6 +218,29 @@ func TestSyncUnknownSourceErrors(t *testing.T) {
 	}
 }
 
+func TestSourceFilterErrorsWhenURLMatchesMultipleRefs(t *testing.T) {
+	lock := state.NewLock()
+	lock.Sources["main"] = state.Source{
+		Input: "github:lox/agent-skills",
+		Type:  "git",
+		URL:   "https://github.com/lox/agent-skills.git",
+	}
+	lock.Sources["release"] = state.Source{
+		Input: "github:lox/agent-skills",
+		Type:  "git",
+		URL:   "https://github.com/lox/agent-skills.git",
+		Ref:   "release",
+	}
+
+	_, err := sourceFilter(lock, "github:lox/agent-skills")
+	if err == nil {
+		t.Fatal("expected ambiguous source error")
+	}
+	if !strings.Contains(err.Error(), "matches multiple source ids") {
+		t.Fatalf("err=%v, want ambiguous source ids", err)
+	}
+}
+
 func TestSubscribeInvalidTargetErrors(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "source")

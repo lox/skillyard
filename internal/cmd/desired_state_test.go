@@ -19,6 +19,7 @@ func TestExportFiltersTargetAndOmitsInstalls(t *testing.T) {
 		Input:          "github:lox/agent-skills",
 		Type:           "git",
 		URL:            "https://github.com/lox/agent-skills.git",
+		Ref:            "v1.2.3",
 		CheckoutPath:   "/machine/specific/checkout",
 		LastSeenCommit: "abc123",
 	}
@@ -50,6 +51,9 @@ func TestExportFiltersTargetAndOmitsInstalls(t *testing.T) {
 	src := out.Sources["git-source"]
 	if src.CheckoutPath != "" || src.LastSeenCommit != "" {
 		t.Fatalf("exported source kept machine state: %+v", src)
+	}
+	if src.Ref != "v1.2.3" {
+		t.Fatalf("exported source ref=%q, want v1.2.3", src.Ref)
 	}
 	if bytes.Contains(stdout.Bytes(), []byte("installs")) {
 		t.Fatalf("export included installs: %s", stdout.String())

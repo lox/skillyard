@@ -439,13 +439,29 @@ func (r Reconciler) resolveSources(lock state.Lock, opts Options) (map[string]re
 				return nil, nil, err
 			}
 			if !opts.DryRun {
-				if err := r.Git.Fetch(checkout); err != nil {
-					return nil, nil, err
+				if src.Ref != "" {
+					if err := r.Git.FetchRefs(checkout); err != nil {
+						return nil, nil, err
+					}
+				} else {
+					if err := r.Git.Fetch(checkout); err != nil {
+						return nil, nil, err
+					}
 				}
 			}
-			commit, err := r.Git.Head(checkout)
-			if err != nil {
-				return nil, nil, err
+			var commit string
+			if src.Ref != "" {
+				var err error
+				commit, err = r.Git.CheckoutRef(checkout, src.Ref)
+				if err != nil {
+					return nil, nil, err
+				}
+			} else {
+				var err error
+				commit, err = r.Git.Head(checkout)
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 			snapshot := filepath.Join(r.Paths.SourcesDir, id, "snapshots", commit)
 			if !opts.DryRun {
@@ -577,6 +593,7 @@ func (r Reconciler) sourceState(ref gitexec.SourceRef, opts Options) (resolvedSo
 				Input:        ref.Input,
 				Type:         "git",
 				URL:          ref.URL,
+				Ref:          ref.Ref,
 				CheckoutPath: checkout,
 			},
 			Type: "git",

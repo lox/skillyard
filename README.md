@@ -83,6 +83,7 @@ skillyard sync
 ## What it does
 
 - reads skills from local paths, GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and `file://` Git URLs
+- tracks a Git branch, tag, or commit when `--ref` is set
 - discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, `.claude/skills/<name>`, and plugin-declared skill paths
 - inspects source skills, validation findings, and warnings without installing
 - prints a selected skill's `SKILL.md` without installing it
@@ -177,8 +178,10 @@ skillyard setup --force
 skillyard discover github:lox/slack-cli
 skillyard discover github:lox/agent-skills --json
 skillyard discover ./repo --full-depth
+skillyard discover github:lox/agent-skills --ref v1.2.3
 
 skillyard use github:lox/agent-skills --include check-pr-description
+skillyard use github:lox/agent-skills --include check-pr-description --ref main
 skillyard use ./skills/review
 
 skillyard export --target codex > skillyard.lock.json
@@ -187,6 +190,7 @@ skillyard apply skillyard.lock.json --target codex --dry-run
 skillyard subscribe github:lox/slack-cli --dry-run
 skillyard subscribe github:lox/slack-cli
 skillyard subscribe github:lox/agent-skills --include '*'
+skillyard subscribe github:lox/agent-skills --include '*' --ref v1.2.3
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
 
 skillyard list
@@ -216,11 +220,14 @@ The output includes source type, resolved source root, skill paths, installabili
 skillyard discover github:lox/slack-cli
 skillyard discover ~/Develop/lox-agent-skills --json
 skillyard discover ./repo --full-depth
+skillyard discover github:lox/agent-skills --ref v1.2.3
 ```
 
 Use `--full-depth` when you want read-only inspection to find every nested `SKILL.md` under a source, not only the standard skill container layouts.
 
 `skillyard` also reads `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` when they declare explicit skill paths.
+
+Use `--ref` with Git sources to inspect a branch, tag, or commit instead of the remote default branch.
 
 ### `use`
 
@@ -234,8 +241,11 @@ If the source has exactly one discovered skill, `--include` can be omitted. If t
 
 ```bash
 skillyard use github:lox/agent-skills --include check-pr-description
+skillyard use github:lox/agent-skills --include check-pr-description --ref v1.2.3
 skillyard use ./skills/review
 ```
+
+Use `--ref` with Git sources to print instructions from a branch, tag, or commit without changing subscriptions.
 
 ### `subscribe`
 
@@ -252,6 +262,7 @@ Useful flags:
 --exclude <pattern>  exclude after includes; repeatable
 --target <agent>     install into one configured agent; repeatable
 --name <source-id>   override the generated source id
+--ref <ref>          Git branch, tag, or commit to track
 --force              replace unmanaged symlinks and drifted managed links
 --dry-run            show the plan without changing links or lockfile
 --json               emit machine-readable output
@@ -259,7 +270,7 @@ Useful flags:
 
 ### `export` and `apply`
 
-Use `export` to write portable desired state for sources and subscriptions. Realized installs, snapshot paths, checkout paths, and last-seen commits are omitted.
+Use `export` to write portable desired state for sources and subscriptions. Realized installs, snapshot paths, checkout paths, and last-seen commits are omitted. Git refs are preserved.
 
 ```bash
 skillyard export > skillyard.lock.json
