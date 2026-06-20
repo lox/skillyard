@@ -304,6 +304,8 @@ Refreshes Git sources, creates new snapshots, links newly matching skills, retar
 skillyard sync
 ```
 
+When a Git source advances, the action output includes a `source-update` row with the previous and new commit. Skill retarget rows also include the commit they moved from and to, which makes `--dry-run` useful for reviewing updates before applying them.
+
 If a subscription used `--include '*'`, newly added upstream skills are installed on sync unless excluded.
 
 ### `unsubscribe` vs `unlink`

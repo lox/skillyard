@@ -200,6 +200,46 @@ func TestBroadSubscriptionSyncAddsAndRemovesSkills(t *testing.T) {
 	}
 }
 
+func TestSyncReportsGitCommitUpdates(t *testing.T) {
+	repo := makeGitRepo(t)
+	writeSkill(t, repo, "valid", "Valid")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-m", "initial")
+
+	env := testEnv(t)
+	ref, err := gitexec.Normalize("file://"+repo, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, _, err := env.Subscribe(state.NewLock(), ref, state.Selection{Include: []string{"valid"}}, []string{agent.Codex}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromCommit := installFor(t, lock, agent.Codex, "valid").SourceCommit
+
+	writeSkill(t, repo, "valid", "Valid changed")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-m", "change-valid")
+
+	lock, result, err := env.Sync(lock, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	toCommit := installFor(t, lock, agent.Codex, "valid").SourceCommit
+	if fromCommit == toCommit {
+		t.Fatalf("commit did not change: %s", fromCommit)
+	}
+
+	sourceUpdate := actionFor(t, result.Actions, "source-update", "")
+	if sourceUpdate.Source != ref.ID || sourceUpdate.From != fromCommit || sourceUpdate.To != toCommit {
+		t.Fatalf("source update action=%+v, want source %s from %s to %s", sourceUpdate, ref.ID, fromCommit, toCommit)
+	}
+	retarget := actionFor(t, result.Actions, "retarget", "valid")
+	if retarget.From != fromCommit || retarget.To != toCommit || retarget.Reason != "source commit changed" {
+		t.Fatalf("retarget action=%+v, want commit movement", retarget)
+	}
+}
+
 func TestSubscribeExcludeFiltersSelectedSkills(t *testing.T) {
 	root := t.TempDir()
 	writeSkill(t, root, "one", "One")
@@ -630,4 +670,15 @@ func installFor(t *testing.T, lock state.Lock, target, name string) state.Instal
 	}
 	t.Fatalf("install %s/%s not found in %+v", target, name, lock.Installs)
 	return state.Install{}
+}
+
+func actionFor(t *testing.T, actions []Action, op, skill string) Action {
+	t.Helper()
+	for _, action := range actions {
+		if action.Op == op && action.Skill == skill {
+			return action
+		}
+	}
+	t.Fatalf("action %s/%s not found in %+v", op, skill, actions)
+	return Action{}
 }
