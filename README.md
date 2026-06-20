@@ -77,7 +77,7 @@ skillyard sync
 ## What it does
 
 - reads skills from local paths, GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and `file://` Git URLs
-- discovers skills at the source root, direct child directories, and `skills/<name>`
+- discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, and `.claude/skills/<name>`
 - inspects source skills, validation findings, and warnings without installing
 - validates `SKILL.md` frontmatter before linking
 - symlinks selected skills into configured agent skill directories
@@ -169,6 +169,7 @@ skillyard setup --force
 
 skillyard discover github:lox/slack-cli
 skillyard discover github:lox/agent-skills --json
+skillyard discover ./repo --full-depth
 
 skillyard subscribe github:lox/slack-cli --dry-run
 skillyard subscribe github:lox/slack-cli
@@ -201,7 +202,10 @@ The output includes source type, resolved source root, skill paths, installabili
 ```bash
 skillyard discover github:lox/slack-cli
 skillyard discover ~/Develop/lox-agent-skills --json
+skillyard discover ./repo --full-depth
 ```
+
+Use `--full-depth` when you want read-only inspection to find every nested `SKILL.md` under a source, not only the standard skill container layouts.
 
 ### `subscribe`
 

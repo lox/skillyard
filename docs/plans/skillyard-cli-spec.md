@@ -142,7 +142,9 @@ Discovery rules:
 - A source root can itself be a skill directory.
 - A source root can contain direct child skill directories.
 - The `skills/` child directory is treated as a skill container when present.
-- Hidden directories and `.git` are ignored.
+- `skills/<category>/` child directories are treated as nested skill containers.
+- `.agents/skills/` and `.claude/skills/` are treated as skill containers when present.
+- Hidden directories are ignored except the explicit `.agents/skills/` and `.claude/skills/` containers; `.git` is ignored.
 - `SKILL.md` must have YAML frontmatter.
 - Frontmatter must include `name` and `description`.
 - `name` must match the skill directory basename.
@@ -328,6 +330,7 @@ Inspects a source without changing subscriptions, installed links, or the lockfi
 skillyard discover github:lox/agent-skills
 skillyard discover github:lox/slack-cli --json
 skillyard discover ~/Develop/lox-agent-skills
+skillyard discover ./repo --full-depth
 ```
 
 Human output includes source metadata and candidate skills:
@@ -343,6 +346,8 @@ slack  yes          skills/slack  -         has-scripts  Work with Slack message
 ```
 
 `discover --json` emits source metadata plus each candidate skill's name, description, path, installability, findings, and warnings.
+
+`discover --full-depth` recursively searches all subdirectories for `SKILL.md`, skipping `.git` and `node_modules`. It is intended for read-only inspection of unusual repositories; subscription reconciliation uses the standard discovery containers so desired state remains predictable.
 
 ### `skillyard subscribe`
 
@@ -523,7 +528,7 @@ Scope:
 - Clone Git sources with the system `git` binary.
 - Create immutable source snapshots for resolved Git commits.
 - Support local path sources.
-- Discover skill directories from root, direct children, and `skills/`.
+- Discover skill directories from root, direct children, `skills/`, `skills/<category>/`, `.agents/skills/`, and `.claude/skills/`.
 - Parse and validate `SKILL.md` frontmatter.
 - Implement `setup`, `subscribe`, `list`, `sync`, `unsubscribe`, `unlink`, and `doctor`.
 - Implement `discover` for read-only source inspection.

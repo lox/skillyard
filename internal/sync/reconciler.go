@@ -39,6 +39,10 @@ type DiscoveryResult struct {
 	Warnings []skill.Finding    `json:"warnings,omitempty"`
 }
 
+type DiscoverOptions struct {
+	FullDepth bool
+}
+
 type DiscoverySource struct {
 	ID       string       `json:"id"`
 	State    state.Source `json:"state"`
@@ -89,7 +93,7 @@ func (r Reconciler) Subscribe(lock state.Lock, ref gitexec.SourceRef, selection 
 	return r.Reconcile(lock, next, opts)
 }
 
-func (r Reconciler) Discover(ref gitexec.SourceRef) (DiscoveryResult, error) {
+func (r Reconciler) Discover(ref gitexec.SourceRef, opts DiscoverOptions) (DiscoveryResult, error) {
 	src, err := r.sourceState(ref, Options{})
 	if err != nil {
 		return DiscoveryResult{}, err
@@ -110,7 +114,7 @@ func (r Reconciler) Discover(ref gitexec.SourceRef) (DiscoveryResult, error) {
 	if !ok {
 		return DiscoveryResult{}, fmt.Errorf("source %s was not resolved", ref.ID)
 	}
-	skills, err := skill.Inspect(source.Root)
+	skills, err := skill.InspectWithOptions(source.Root, skill.DiscoveryOptions{FullDepth: opts.FullDepth})
 	if err != nil {
 		return DiscoveryResult{}, err
 	}

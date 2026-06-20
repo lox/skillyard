@@ -25,6 +25,10 @@ type Inspection struct {
 	Findings []Finding `json:"findings,omitempty"`
 }
 
+type DiscoveryOptions struct {
+	FullDepth bool
+}
+
 type Finding struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -32,8 +36,12 @@ type Finding struct {
 }
 
 func Discover(root string) ([]Skill, error) {
+	return DiscoverWithOptions(root, DiscoveryOptions{})
+}
+
+func DiscoverWithOptions(root string, opts DiscoveryOptions) ([]Skill, error) {
 	root = filepath.Clean(root)
-	candidates, err := candidates(root)
+	candidates, err := candidates(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +60,12 @@ func Discover(root string) ([]Skill, error) {
 }
 
 func Inspect(root string) ([]Inspection, error) {
+	return InspectWithOptions(root, DiscoveryOptions{})
+}
+
+func InspectWithOptions(root string, opts DiscoveryOptions) ([]Inspection, error) {
 	root = filepath.Clean(root)
-	candidates, err := candidates(root)
+	candidates, err := candidates(root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -94,36 +106,129 @@ func Inspect(root string) ([]Inspection, error) {
 	return out, nil
 }
 
-func candidates(root string) ([]string, error) {
+func candidates(root string, opts DiscoveryOptions) ([]string, error) {
+	if opts.FullDepth {
+		return recursiveCandidates(root)
+	}
+	info, err := os.Stat(root)
+	if err != nil {
+		return nil, fmt.Errorf("read skill root %s: %w", root, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("read skill root %s: not a directory", root)
+	}
 	var out []string
 	if hasSkillMD(root) {
 		return []string{root}, nil
 	}
-	containers := []string{root}
-	if info, err := os.Stat(filepath.Join(root, "skills")); err == nil && info.IsDir() {
-		containers = append(containers, filepath.Join(root, "skills"))
-	}
-	for _, container := range containers {
-		entries, err := os.ReadDir(container)
+	seen := map[string]bool{}
+	for _, container := range []string{
+		root,
+		filepath.Join(root, "skills"),
+		filepath.Join(root, ".agents", "skills"),
+		filepath.Join(root, ".claude", "skills"),
+	} {
+		candidates, err := childSkillCandidates(container)
 		if err != nil {
-			return nil, fmt.Errorf("read skill root %s: %w", container, err)
+			return nil, err
 		}
-		for _, entry := range entries {
-			name := entry.Name()
-			if strings.HasPrefix(name, ".") {
-				continue
-			}
-			if !entry.IsDir() {
-				continue
-			}
-			path := filepath.Join(container, name)
-			if hasSkillMD(path) {
-				out = append(out, path)
-			}
+		appendCandidates(&out, seen, candidates)
+	}
+	nested, err := nestedSkillCandidates(filepath.Join(root, "skills"))
+	if err != nil {
+		return nil, err
+	}
+	appendCandidates(&out, seen, nested)
+	sort.Strings(out)
+	return out, nil
+}
+
+func childSkillCandidates(container string) ([]string, error) {
+	entries, err := os.ReadDir(container)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read skill root %s: %w", container, err)
+	}
+	var out []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") || !entry.IsDir() {
+			continue
 		}
+		path := filepath.Join(container, name)
+		if hasSkillMD(path) {
+			out = append(out, path)
+		}
+	}
+	return out, nil
+}
+
+func nestedSkillCandidates(container string) ([]string, error) {
+	entries, err := os.ReadDir(container)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read skill root %s: %w", container, err)
+	}
+	var out []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") || !entry.IsDir() {
+			continue
+		}
+		candidates, err := childSkillCandidates(filepath.Join(container, name))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, candidates...)
+	}
+	return out, nil
+}
+
+func recursiveCandidates(root string) ([]string, error) {
+	info, err := os.Stat(root)
+	if err != nil {
+		return nil, fmt.Errorf("walk skill root %s: %w", root, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("walk skill root %s: not a directory", root)
+	}
+	var out []string
+	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		name := entry.Name()
+		if path != root && (name == ".git" || name == "node_modules") {
+			return filepath.SkipDir
+		}
+		if hasSkillMD(path) {
+			out = append(out, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("walk skill root %s: %w", root, err)
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+func appendCandidates(out *[]string, seen map[string]bool, candidates []string) {
+	for _, candidate := range candidates {
+		candidate = filepath.Clean(candidate)
+		if seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		*out = append(*out, candidate)
+	}
 }
 
 func hasSkillMD(path string) bool {

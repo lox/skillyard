@@ -75,3 +75,35 @@ func TestDiscoverHumanOutputShowsInstallability(t *testing.T) {
 		}
 	}
 }
+
+func TestDiscoverFullDepthFindsArbitraryNestedSkill(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "source")
+	writeCommandTestSkill(t, filepath.Join(source, "examples", "deep", "demo"), "demo")
+
+	var defaultOut bytes.Buffer
+	defaultCtx := commandTestContextWithWriters(root, &defaultOut, &bytes.Buffer{})
+	if err := (DiscoverCmd{Source: source, JSON: true}).Run(defaultCtx); err != nil {
+		t.Fatal(err)
+	}
+	var defaultResult discoverOutput
+	if err := json.Unmarshal(defaultOut.Bytes(), &defaultResult); err != nil {
+		t.Fatal(err)
+	}
+	if len(defaultResult.Skills) != 0 {
+		t.Fatalf("default skills=%+v, want none", defaultResult.Skills)
+	}
+
+	var fullOut bytes.Buffer
+	fullCtx := commandTestContextWithWriters(root, &fullOut, &bytes.Buffer{})
+	if err := (DiscoverCmd{Source: source, FullDepth: true, JSON: true}).Run(fullCtx); err != nil {
+		t.Fatal(err)
+	}
+	var fullResult discoverOutput
+	if err := json.Unmarshal(fullOut.Bytes(), &fullResult); err != nil {
+		t.Fatal(err)
+	}
+	if len(fullResult.Skills) != 1 || fullResult.Skills[0].Name != "demo" {
+		t.Fatalf("full-depth skills=%+v, want demo", fullResult.Skills)
+	}
+}
