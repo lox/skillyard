@@ -58,6 +58,8 @@ type Action struct {
 	Target string `json:"target,omitempty"`
 	Source string `json:"source,omitempty"`
 	Path   string `json:"path,omitempty"`
+	From   string `json:"from,omitempty"`
+	To     string `json:"to,omitempty"`
 	Reason string `json:"reason,omitempty"`
 }
 
@@ -215,7 +217,7 @@ func (r Reconciler) Reconcile(oldLock, desiredLock state.Lock, opts Options) (st
 		desiredKey[key] = d
 	}
 
-	var actions []Action
+	actions := sourceUpdateActions(oldLock, resolved)
 	next := cloneLock(desiredLock)
 	for id, src := range resolved {
 		next.Sources[id] = src.State
@@ -265,8 +267,12 @@ func (r Reconciler) Reconcile(oldLock, desiredLock state.Lock, opts Options) (st
 			if hadExisting {
 				op = "retarget"
 			}
+			action := Action{Op: op, Skill: d.Install.Skill, Target: d.Install.Target, Source: d.Install.Source, Path: d.Install.LinkPathResolved}
+			if hadExisting {
+				action = installUpdateAction(action, existing, d.Install)
+			}
 			next.Installs = append(next.Installs, d.Install)
-			actions = append(actions, Action{Op: op, Skill: d.Install.Skill, Target: d.Install.Target, Source: d.Install.Source, Path: d.Install.LinkPathResolved})
+			actions = append(actions, action)
 			continue
 		}
 		sourcePath := sourcePathForInstall(d.Install)
@@ -284,10 +290,50 @@ func (r Reconciler) Reconcile(oldLock, desiredLock state.Lock, opts Options) (st
 				op = "repair"
 			}
 		}
-		actions = append(actions, Action{Op: op, Skill: d.Install.Skill, Target: d.Install.Target, Source: d.Install.Source, Path: d.Install.LinkPathResolved})
+		action := Action{Op: op, Skill: d.Install.Skill, Target: d.Install.Target, Source: d.Install.Source, Path: d.Install.LinkPathResolved}
+		if hadExisting {
+			action = installUpdateAction(action, existing, d.Install)
+		}
+		actions = append(actions, action)
 	}
 	sortInstalls(next.Installs)
 	return next, Result{Actions: actions, Warnings: warnings, Lock: next}, nil
+}
+
+func sourceUpdateActions(oldLock state.Lock, resolved map[string]resolvedSource) []Action {
+	var actions []Action
+	var sourceIDs []string
+	for id, src := range resolved {
+		if src.Type != "git" || src.Commit == "" {
+			continue
+		}
+		previous := oldLock.Sources[id].LastSeenCommit
+		if previous == "" || previous == src.Commit {
+			continue
+		}
+		sourceIDs = append(sourceIDs, id)
+	}
+	sort.Strings(sourceIDs)
+	for _, id := range sourceIDs {
+		src := resolved[id]
+		actions = append(actions, Action{
+			Op:     "source-update",
+			Source: id,
+			From:   oldLock.Sources[id].LastSeenCommit,
+			To:     src.Commit,
+			Reason: "git commit changed",
+		})
+	}
+	return actions
+}
+
+func installUpdateAction(action Action, existing, desired state.Install) Action {
+	if existing.SourceCommit != "" && desired.SourceCommit != "" && existing.SourceCommit != desired.SourceCommit {
+		action.From = existing.SourceCommit
+		action.To = desired.SourceCommit
+		action.Reason = "source commit changed"
+	}
+	return action
 }
 
 func preflight(removals []state.Install, desired []desiredInstall, oldLock state.Lock, opts Options) error {

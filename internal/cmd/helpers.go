@@ -47,16 +47,18 @@ func printActions(out io.Writer, result syncer.Result) {
 			action.Target,
 			action.Source,
 			dashIfEmpty(action.Path),
+			shortValue(action.From),
+			shortValue(action.To),
 			dashIfEmpty(action.Reason),
 		})
 	}
-	renderSectionTable(out, styles, "Actions", []string{"OP", "SKILL", "TARGET", "SOURCE", "PATH", "REASON"}, rows, func(_ int, col int, value string) lipgloss.Style {
+	renderSectionTable(out, styles, "Actions", []string{"OP", "SKILL", "TARGET", "SOURCE", "PATH", "FROM", "TO", "REASON"}, rows, func(_ int, col int, value string) lipgloss.Style {
 		switch col {
 		case 0:
 			return actionStyle(styles, value)
 		case 3:
 			return styles.info
-		case 4, 5:
+		case 4, 5, 6, 7:
 			return mutedIfDash(styles, value)
 		default:
 			return styles.cell
@@ -83,11 +85,21 @@ func actionStyle(styles outputStyles, op string) lipgloss.Style {
 		return styles.muted
 	case "unlink":
 		return styles.warn
-	case "retarget":
+	case "retarget", "source-update":
 		return styles.accent
 	default:
 		return styles.cell
 	}
+}
+
+func shortValue(value string) string {
+	if value == "" {
+		return "-"
+	}
+	if len(value) > 12 {
+		return value[:12]
+	}
+	return value
 }
 
 func mutedIfDash(styles outputStyles, value string) lipgloss.Style {

@@ -494,6 +494,8 @@ Rules:
 
 - Build a plan from the lockfile's subscriptions before mutating targets.
 - Use the shared reconciler without editing subscription records.
+- Report Git source commit movement as `source-update` actions with `from` and `to` commit fields.
+- Report retargeted Git skill links with `from` and `to` commit fields when the source commit changed.
 - Link every valid skill matching a subscription's include/exclude patterns.
 - For narrow includes such as `slack`, keep only those matching skills current.
 - For broad includes such as `'*'`, link newly discovered valid skills automatically.
