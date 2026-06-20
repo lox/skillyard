@@ -26,6 +26,49 @@ func TestDiscoverTopLevelAndSkillsContainer(t *testing.T) {
 	}
 }
 
+func TestDiscoverCatalogAndAgentSkillContainers(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, filepath.Join(root, "skills", "productivity", "teach"), "teach", "Teach")
+	writeTestSkill(t, filepath.Join(root, ".agents", "skills", "shared"), "shared", "Shared")
+	writeTestSkill(t, filepath.Join(root, ".claude", "skills", "claude-only"), "claude-only", "Claude")
+
+	skills, err := Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, s := range skills {
+		got[s.Name] = s.RelPath
+	}
+	want := map[string]string{
+		"teach":       "skills/productivity/teach",
+		"shared":      ".agents/skills/shared",
+		"claude-only": ".claude/skills/claude-only",
+	}
+	for name, rel := range want {
+		if got[name] != rel {
+			t.Fatalf("skill %q rel=%q, want %q; all=%+v", name, got[name], rel, skills)
+		}
+	}
+}
+
+func TestDiscoverWithFullDepthFindsArbitraryNestedSkills(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, filepath.Join(root, "examples", "deep", "demo"), "demo", "Demo")
+	writeTestSkill(t, filepath.Join(root, "node_modules", "ignored"), "ignored", "Ignored")
+
+	skills, err := DiscoverWithOptions(root, DiscoveryOptions{FullDepth: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(skills) != 1 {
+		t.Fatalf("skills=%+v, want only full-depth demo skill", skills)
+	}
+	if skills[0].Name != "demo" || skills[0].RelPath != "examples/deep/demo" {
+		t.Fatalf("skill=%+v, want demo at examples/deep/demo", skills[0])
+	}
+}
+
 func TestDiscoverSingleSkillRoot(t *testing.T) {
 	root := t.TempDir()
 	writeTestSkill(t, root, filepath.Base(root), "Single")

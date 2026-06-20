@@ -12,8 +12,9 @@ import (
 )
 
 type DiscoverCmd struct {
-	Source string `arg:"" help:"Git source or local path to inspect."`
-	JSON   bool   `name:"json" help:"Emit machine-readable JSON."`
+	Source    string `arg:"" help:"Git source or local path to inspect."`
+	FullDepth bool   `name:"full-depth" help:"Search all subdirectories for SKILL.md files."`
+	JSON      bool   `name:"json" help:"Emit machine-readable JSON."`
 }
 
 type discoverOutput struct {
@@ -52,7 +53,7 @@ func (c DiscoverCmd) Run(ctx *Context) error {
 	result, err := (syncer.Reconciler{
 		Paths: ctx.Paths,
 		Git:   ctx.Git,
-	}).Discover(ref)
+	}).Discover(ref, syncer.DiscoverOptions{FullDepth: c.FullDepth})
 	if err != nil {
 		return err
 	}
