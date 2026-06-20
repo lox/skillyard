@@ -44,6 +44,12 @@ Preview installing a public application repo's bundled skill:
 skillyard subscribe github:lox/slack-cli --dry-run
 ```
 
+Inspect a source without changing subscriptions, links, or the lockfile:
+
+```bash
+skillyard discover github:lox/slack-cli
+```
+
 Install it for every enabled configured agent:
 
 ```bash
@@ -72,6 +78,7 @@ skillyard sync
 
 - reads skills from local paths, GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and `file://` Git URLs
 - discovers skills at the source root, direct child directories, and `skills/<name>`
+- inspects source skills, validation findings, and warnings without installing
 - validates `SKILL.md` frontmatter before linking
 - symlinks selected skills into configured agent skill directories
 - stores Git installs as immutable snapshots under `~/.local/share/skillyard`
@@ -160,6 +167,9 @@ skillyard setup
 skillyard setup --dry-run
 skillyard setup --force
 
+skillyard discover github:lox/slack-cli
+skillyard discover github:lox/agent-skills --json
+
 skillyard subscribe github:lox/slack-cli --dry-run
 skillyard subscribe github:lox/slack-cli
 skillyard subscribe github:lox/agent-skills --include '*'
@@ -176,6 +186,21 @@ skillyard sync --dry-run
 skillyard unsubscribe slack --target codex
 skillyard unlink slack --target codex
 skillyard doctor
+```
+
+### `discover`
+
+Shows the skills available from a source without changing subscriptions, installed links, or the lockfile.
+
+```bash
+skillyard discover <source>
+```
+
+The output includes source type, resolved source root, skill paths, installability, validation findings, and warnings such as `scripts/`, executable files, or `mcp.json`.
+
+```bash
+skillyard discover github:lox/slack-cli
+skillyard discover ~/Develop/lox-agent-skills --json
 ```
 
 ### `subscribe`

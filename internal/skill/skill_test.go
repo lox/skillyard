@@ -42,6 +42,32 @@ func TestDiscoverSingleSkillRoot(t *testing.T) {
 	}
 }
 
+func TestInspectReportsInvalidCandidates(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, filepath.Join(root, "valid"), "valid", "Valid")
+	bad := filepath.Join(root, "bad")
+	if err := os.MkdirAll(bad, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bad, "SKILL.md"), []byte("plain text\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	inspections, err := Inspect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inspections) != 2 {
+		t.Fatalf("inspections=%d, want 2", len(inspections))
+	}
+	if inspections[0].Skill.Name != "bad" || len(inspections[0].Findings) != 1 || inspections[0].Findings[0].Code != "invalid-skill" {
+		t.Fatalf("bad inspection=%+v", inspections[0])
+	}
+	if inspections[1].Skill.Name != "valid" || len(inspections[1].Findings) != 0 {
+		t.Fatalf("valid inspection=%+v", inspections[1])
+	}
+}
+
 func TestParseRequiresFrontmatter(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "bad")

@@ -15,6 +15,7 @@ import (
 type CLI struct {
 	Version     kong.VersionFlag `help:"Show version and exit."`
 	Subscribe   SubscribeCmd     `cmd:"" help:"Subscribe a target to skills from a source."`
+	Discover    DiscoverCmd      `cmd:"" help:"Inspect skills available from a source without installing them."`
 	Setup       SetupCmd         `cmd:"" help:"Create skillyard config and show detected agents."`
 	Sync        SyncCmd          `cmd:"" help:"Reconcile subscriptions with installed skill links."`
 	List        ListCmd          `cmd:"" help:"List subscriptions and installed skill links."`
@@ -43,13 +44,20 @@ func NewContext(out, err io.Writer) *Context {
 	}
 }
 
-func (c *Context) ensureRuntime() error {
+func (c *Context) ensurePaths() error {
 	if c.Paths.LockPath == "" {
 		paths, err := state.DefaultPaths()
 		if err != nil {
 			return err
 		}
 		c.Paths = paths
+	}
+	return nil
+}
+
+func (c *Context) ensureRuntime() error {
+	if err := c.ensurePaths(); err != nil {
+		return err
 	}
 	if c.Agents.Agents == nil {
 		agents, err := config.LoadAgents(c.Paths.ConfigPath)

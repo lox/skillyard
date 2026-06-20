@@ -15,6 +15,7 @@ spec_refs:
 The core workflow is:
 
 ```bash
+skillyard discover github:lox/agent-skills
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
@@ -50,6 +51,7 @@ Manual linking works for a single local repo, but it becomes fragile with multip
 - Manage global Codex and Amp user skills.
 - Add skills from GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and local paths.
 - Use the system `git` binary so private repositories work with existing SSH agents and credential helpers.
+- Inspect source skills without changing subscriptions, installed links, or lockfile state.
 - Install by symlinking selected skill directories into agent roots.
 - Preserve Codex and Amp as explicit targets.
 - Record ownership state for safe list, unsubscribe, and unlink behavior.
@@ -161,6 +163,8 @@ Selected skills warn when they contain:
 - `mcp.json`
 
 Warnings are visible in human output and included in JSON output.
+
+`skillyard discover` reports validation findings and warnings for every candidate it can inspect. Invalid `SKILL.md` files do not block the whole discover command, but the same findings still block install-oriented commands such as `subscribe` and `sync`.
 
 ## Desired And Realized State
 
@@ -315,6 +319,30 @@ Rules:
 - Report each detected/configured agent, whether it is enabled, the resolved skills directory, and whether that directory currently exists.
 - If a config already exists and `--force` is not passed, load and report the existing configured agents without modifying the file.
 - `--json` emits config path, write status, dry-run status, generated content when relevant, and detected agents.
+
+### `skillyard discover`
+
+Inspects a source without changing subscriptions, installed links, or the lockfile. Git sources may be cloned into cache for inspection, but no managed source snapshot or install record is written.
+
+```bash
+skillyard discover github:lox/agent-skills
+skillyard discover github:lox/slack-cli --json
+skillyard discover ~/Develop/lox-agent-skills
+```
+
+Human output includes source metadata and candidate skills:
+
+```text
+Source
+ID                        TYPE  COMMIT        URL                                      ROOT
+github-com-lox-skills...  git   0123456789ab  https://github.com/lox/skills.git        /Users/me/.cache/skillyard/source-.../repo
+
+Skills
+NAME   INSTALLABLE  PATH          FINDINGS  WARNINGS     DESCRIPTION
+slack  yes          skills/slack  -         has-scripts  Work with Slack messages
+```
+
+`discover --json` emits source metadata plus each candidate skill's name, description, path, installability, findings, and warnings.
 
 ### `skillyard subscribe`
 
@@ -498,6 +526,7 @@ Scope:
 - Discover skill directories from root, direct children, and `skills/`.
 - Parse and validate `SKILL.md` frontmatter.
 - Implement `setup`, `subscribe`, `list`, `sync`, `unsubscribe`, `unlink`, and `doctor`.
+- Implement `discover` for read-only source inspection.
 - Implement one reconciler shared by `subscribe`, `sync`, `unsubscribe`, and `unlink`.
 - Support repeated `--include` and repeated `--exclude` selection.
 - Create and remove managed symlinks.
