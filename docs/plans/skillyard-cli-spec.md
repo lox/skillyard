@@ -17,6 +17,8 @@ The core workflow is:
 ```bash
 skillyard discover github:lox/agent-skills
 skillyard use github:lox/agent-skills --include check-pr-description
+skillyard export --target codex > skillyard.lock.json
+skillyard apply skillyard.lock.json --target codex --dry-run
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
@@ -54,6 +56,7 @@ Manual linking works for a single local repo, but it becomes fragile with multip
 - Use the system `git` binary so private repositories work with existing SSH agents and credential helpers.
 - Inspect source skills without changing subscriptions, installed links, or lockfile state.
 - Print one selected skill's instructions without installing it.
+- Export and apply portable desired state for sources and subscriptions.
 - Install by symlinking selected skill directories into agent roots.
 - Preserve Codex and Amp as explicit targets.
 - Record ownership state for safe list, unsubscribe, and unlink behavior.
@@ -370,6 +373,38 @@ Rules:
 - If the selected skill has validation findings, fail instead of printing instructions.
 - Only the selected `SKILL.md` content is written to stdout.
 
+### `skillyard export`
+
+Writes portable desired state for sources and subscriptions to stdout. Realized install records, snapshot paths, checkout paths, and last-seen commits are omitted.
+
+```bash
+skillyard export > skillyard.lock.json
+skillyard export --target codex > skillyard.lock.json
+```
+
+Rules:
+
+- `--target` filters subscriptions to one configured target.
+- Only sources referenced by exported subscriptions are included.
+- Git sources keep their input, type, and URL; machine-local checkout and last-seen commit fields are omitted.
+
+### `skillyard apply`
+
+Reconciles the current machine to an exported desired-state file through the same source resolution, validation, preflight, link, and lockfile write path as `sync`.
+
+```bash
+skillyard apply skillyard.lock.json --dry-run
+skillyard apply skillyard.lock.json --target codex
+```
+
+Rules:
+
+- When `--target` is omitted, replace all current subscriptions with the file's subscriptions.
+- When `--target` is set, replace only that target's subscriptions; other targets remain unchanged.
+- `--dry-run` shows the reconciliation plan without changing links or lockfile state.
+- `--json` emits the same machine-readable reconciliation result as `subscribe` and `sync`.
+- `--force` has the same conflict-replacement meaning as `sync --force`.
+
 ### `skillyard subscribe`
 
 Adds or updates a subscription from one source into one or more global targets, then reconciles that desired state unless `--dry-run` is set.
@@ -554,6 +589,7 @@ Scope:
 - Implement `setup`, `subscribe`, `list`, `sync`, `unsubscribe`, `unlink`, and `doctor`.
 - Implement `discover` for read-only source inspection.
 - Implement `use` for one-off skill instruction output.
+- Implement `export` and `apply` for portable desired-state files.
 - Implement one reconciler shared by `subscribe`, `sync`, `unsubscribe`, and `unlink`.
 - Support repeated `--include` and repeated `--exclude` selection.
 - Create and remove managed symlinks.

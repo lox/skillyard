@@ -17,6 +17,8 @@ type CLI struct {
 	Subscribe   SubscribeCmd     `cmd:"" help:"Subscribe a target to skills from a source."`
 	Discover    DiscoverCmd      `cmd:"" help:"Inspect skills available from a source without installing them."`
 	Use         UseCmd           `cmd:"" help:"Print one skill's instructions without installing it."`
+	Export      ExportCmd        `cmd:"" help:"Export desired subscriptions as portable JSON."`
+	Apply       ApplyCmd         `cmd:"" help:"Apply desired subscriptions from exported JSON."`
 	Setup       SetupCmd         `cmd:"" help:"Create skillyard config and show detected agents."`
 	Sync        SyncCmd          `cmd:"" help:"Reconcile subscriptions with installed skill links."`
 	List        ListCmd          `cmd:"" help:"List subscriptions and installed skill links."`
