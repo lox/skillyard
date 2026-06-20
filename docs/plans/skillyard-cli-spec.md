@@ -16,6 +16,7 @@ The core workflow is:
 
 ```bash
 skillyard discover github:lox/agent-skills
+skillyard use github:lox/agent-skills --include check-pr-description
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
 skillyard subscribe github:lox/agent-skills --include '*' --exclude consulting-librarian --target amp
 skillyard subscribe git@github.com:org/private-skills.git --include deploy-review --target codex
@@ -52,6 +53,7 @@ Manual linking works for a single local repo, but it becomes fragile with multip
 - Add skills from GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and local paths.
 - Use the system `git` binary so private repositories work with existing SSH agents and credential helpers.
 - Inspect source skills without changing subscriptions, installed links, or lockfile state.
+- Print one selected skill's instructions without installing it.
 - Install by symlinking selected skill directories into agent roots.
 - Preserve Codex and Amp as explicit targets.
 - Record ownership state for safe list, unsubscribe, and unlink behavior.
@@ -352,6 +354,22 @@ slack  yes          skills/slack  -         has-scripts  Work with Slack message
 
 Plugin manifests are read from `.claude-plugin/` and `.codex-plugin/`. Single-plugin manifests may declare `skills`, and marketplace manifests may declare `metadata.pluginRoot`, `plugins[].source`, and `plugins[].skills`. Manifest-declared paths must stay inside the source root.
 
+### `skillyard use`
+
+Prints one selected skill's `SKILL.md` content to stdout without changing subscriptions, installed links, or the lockfile.
+
+```bash
+skillyard use github:lox/agent-skills --include check-pr-description
+skillyard use ./skills/review
+```
+
+Rules:
+
+- If `--include` is omitted and the source has exactly one discovered skill, print that skill.
+- If the source has zero skills, multiple skills, no matching include, or an include pattern matches multiple skills, fail with guidance to select exactly one skill.
+- If the selected skill has validation findings, fail instead of printing instructions.
+- Only the selected `SKILL.md` content is written to stdout.
+
 ### `skillyard subscribe`
 
 Adds or updates a subscription from one source into one or more global targets, then reconciles that desired state unless `--dry-run` is set.
@@ -535,6 +553,7 @@ Scope:
 - Parse and validate `SKILL.md` frontmatter.
 - Implement `setup`, `subscribe`, `list`, `sync`, `unsubscribe`, `unlink`, and `doctor`.
 - Implement `discover` for read-only source inspection.
+- Implement `use` for one-off skill instruction output.
 - Implement one reconciler shared by `subscribe`, `sync`, `unsubscribe`, and `unlink`.
 - Support repeated `--include` and repeated `--exclude` selection.
 - Create and remove managed symlinks.
