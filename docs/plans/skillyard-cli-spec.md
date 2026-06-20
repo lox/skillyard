@@ -1,6 +1,6 @@
 ---
 status: implemented
-last_reviewed: 2026-06-09
+last_reviewed: 2026-06-20
 spec_refs:
   - https://github.com/vercel-labs/skills
   - https://www.npmjs.com/package/skills
@@ -16,7 +16,7 @@ The core workflow is:
 
 ```bash
 skillyard discover github:lox/agent-skills
-skillyard use github:lox/agent-skills --include check-pr-description
+skillyard show github:lox/agent-skills --include check-pr-description
 skillyard export --target codex > skillyard.lock.json
 skillyard apply skillyard.lock.json --target codex --dry-run
 skillyard subscribe github:lox/agent-skills --include '*' --target codex
@@ -56,7 +56,7 @@ Manual linking works for a single local repo, but it becomes fragile with multip
 - Add skills from GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and local paths.
 - Use the system `git` binary so private repositories work with existing SSH agents and credential helpers.
 - Inspect source skills without changing subscriptions, installed links, or lockfile state.
-- Print one selected skill's instructions without installing it.
+- Show one selected skill's instructions without installing it.
 - Export and apply portable desired state for sources and subscriptions.
 - Pin Git sources to a branch, tag, or commit when requested.
 - Install by symlinking selected skill directories into agent roots.
@@ -366,14 +366,14 @@ slack  yes          skills/slack  -         has-scripts  Work with Slack message
 
 Plugin manifests are read from `.claude-plugin/` and `.codex-plugin/`. Single-plugin manifests may declare `skills`, and marketplace manifests may declare `metadata.pluginRoot`, `plugins[].source`, and `plugins[].skills`. Manifest-declared paths must stay inside the source root.
 
-### `skillyard use`
+### `skillyard show`
 
 Prints one selected skill's `SKILL.md` content to stdout without changing subscriptions, installed links, or the lockfile.
 
 ```bash
-skillyard use github:lox/agent-skills --include check-pr-description
-skillyard use github:lox/agent-skills --include check-pr-description --ref v1.2.3
-skillyard use ./skills/review
+skillyard show github:lox/agent-skills --include check-pr-description
+skillyard show github:lox/agent-skills --include check-pr-description --ref v1.2.3
+skillyard show ./skills/review
 ```
 
 Rules:
@@ -605,7 +605,7 @@ Scope:
 - Parse and validate `SKILL.md` frontmatter.
 - Implement `setup`, `subscribe`, `list`, `sync`, `unsubscribe`, `unlink`, and `doctor`.
 - Implement `discover` for read-only source inspection.
-- Implement `use` for one-off skill instruction output.
+- Implement `show` for one-off skill instruction output.
 - Implement `export` and `apply` for portable desired-state files.
 - Implement one reconciler shared by `subscribe`, `sync`, `unsubscribe`, and `unlink`.
 - Support repeated `--include` and repeated `--exclude` selection.

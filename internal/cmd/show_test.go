@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestUsePrintsSelectedSkillWithoutLockfile(t *testing.T) {
+func TestShowPrintsSelectedSkillWithoutLockfile(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "source")
 	writeCommandTestSkill(t, source, "alpha")
@@ -16,11 +16,11 @@ func TestUsePrintsSelectedSkillWithoutLockfile(t *testing.T) {
 
 	var stdout bytes.Buffer
 	ctx := commandTestContextWithWriters(root, &stdout, &bytes.Buffer{})
-	if err := (UseCmd{Source: source, Include: []string{"beta"}}).Run(ctx); err != nil {
+	if err := (ShowCmd{Source: source, Include: []string{"beta"}}).Run(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(ctx.Paths.LockPath); !os.IsNotExist(err) {
-		t.Fatalf("lockfile exists or errored after use: %v", err)
+		t.Fatalf("lockfile exists or errored after show: %v", err)
 	}
 	text := stdout.String()
 	if !strings.Contains(text, "name: beta") {
@@ -31,14 +31,14 @@ func TestUsePrintsSelectedSkillWithoutLockfile(t *testing.T) {
 	}
 }
 
-func TestUseDefaultsToOnlySkill(t *testing.T) {
+func TestShowDefaultsToOnlySkill(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "source")
 	writeCommandTestSkill(t, source, "only")
 
 	var stdout bytes.Buffer
 	ctx := commandTestContextWithWriters(root, &stdout, &bytes.Buffer{})
-	if err := (UseCmd{Source: source}).Run(ctx); err != nil {
+	if err := (ShowCmd{Source: source}).Run(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(stdout.String(), "name: only") {
@@ -46,14 +46,14 @@ func TestUseDefaultsToOnlySkill(t *testing.T) {
 	}
 }
 
-func TestUseErrorsWhenSelectionIsAmbiguous(t *testing.T) {
+func TestShowErrorsWhenSelectionIsAmbiguous(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "source")
 	writeCommandTestSkill(t, source, "alpha")
 	writeCommandTestSkill(t, source, "beta")
 
 	ctx := commandTestContext(root)
-	err := (UseCmd{Source: source}).Run(ctx)
+	err := (ShowCmd{Source: source}).Run(ctx)
 	if err == nil {
 		t.Fatal("expected ambiguous selection error")
 	}
@@ -61,7 +61,7 @@ func TestUseErrorsWhenSelectionIsAmbiguous(t *testing.T) {
 		t.Fatalf("err=%v, want multiple skills error", err)
 	}
 
-	err = (UseCmd{Source: source, Include: []string{"*"}}).Run(ctx)
+	err = (ShowCmd{Source: source, Include: []string{"*"}}).Run(ctx)
 	if err == nil {
 		t.Fatal("expected multiple match error")
 	}
@@ -70,7 +70,7 @@ func TestUseErrorsWhenSelectionIsAmbiguous(t *testing.T) {
 	}
 }
 
-func TestUseRejectsInvalidSkill(t *testing.T) {
+func TestShowRejectsInvalidSkill(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "source")
 	bad := filepath.Join(source, "bad")
@@ -82,7 +82,7 @@ func TestUseRejectsInvalidSkill(t *testing.T) {
 	}
 
 	ctx := commandTestContext(root)
-	err := (UseCmd{Source: source, Include: []string{"other"}}).Run(ctx)
+	err := (ShowCmd{Source: source, Include: []string{"other"}}).Run(ctx)
 	if err == nil {
 		t.Fatal("expected invalid skill error")
 	}

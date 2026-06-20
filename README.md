@@ -50,10 +50,10 @@ Inspect a source without changing subscriptions, links, or the lockfile:
 skillyard discover github:lox/slack-cli
 ```
 
-Print a skill's instructions without installing it:
+Show a skill's instructions without installing it:
 
 ```bash
-skillyard use github:lox/agent-skills --include check-pr-description
+skillyard show github:lox/agent-skills --include check-pr-description
 ```
 
 Install it for every enabled configured agent:
@@ -180,9 +180,9 @@ skillyard discover github:lox/agent-skills --json
 skillyard discover ./repo --full-depth
 skillyard discover github:lox/agent-skills --ref v1.2.3
 
-skillyard use github:lox/agent-skills --include check-pr-description
-skillyard use github:lox/agent-skills --include check-pr-description --ref main
-skillyard use ./skills/review
+skillyard show github:lox/agent-skills --include check-pr-description
+skillyard show github:lox/agent-skills --include check-pr-description --ref main
+skillyard show ./skills/review
 
 skillyard export --target codex > skillyard.lock.json
 skillyard apply skillyard.lock.json --target codex --dry-run
@@ -229,20 +229,20 @@ Use `--full-depth` when you want read-only inspection to find every nested `SKIL
 
 Use `--ref` with Git sources to inspect a branch, tag, or commit instead of the remote default branch.
 
-### `use`
+### `show`
 
 Prints one selected skill's `SKILL.md` content to stdout without changing subscriptions, installed links, or the lockfile.
 
 ```bash
-skillyard use <source> [--include <skill>]
+skillyard show <source> [--include <skill>]
 ```
 
-If the source has exactly one discovered skill, `--include` can be omitted. If the source has zero or multiple matching skills, `use` fails with guidance to select exactly one skill.
+If the source has exactly one discovered skill, `--include` can be omitted. If the source has zero or multiple matching skills, `show` fails with guidance to select exactly one skill.
 
 ```bash
-skillyard use github:lox/agent-skills --include check-pr-description
-skillyard use github:lox/agent-skills --include check-pr-description --ref v1.2.3
-skillyard use ./skills/review
+skillyard show github:lox/agent-skills --include check-pr-description
+skillyard show github:lox/agent-skills --include check-pr-description --ref v1.2.3
+skillyard show ./skills/review
 ```
 
 Use `--ref` with Git sources to print instructions from a branch, tag, or commit without changing subscriptions.
