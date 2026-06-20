@@ -50,6 +50,12 @@ Inspect a source without changing subscriptions, links, or the lockfile:
 skillyard discover github:lox/slack-cli
 ```
 
+Print a skill's instructions without installing it:
+
+```bash
+skillyard use github:lox/agent-skills --include check-pr-description
+```
+
 Install it for every enabled configured agent:
 
 ```bash
@@ -79,6 +85,7 @@ skillyard sync
 - reads skills from local paths, GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and `file://` Git URLs
 - discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, `.claude/skills/<name>`, and plugin-declared skill paths
 - inspects source skills, validation findings, and warnings without installing
+- prints a selected skill's `SKILL.md` without installing it
 - validates `SKILL.md` frontmatter before linking
 - symlinks selected skills into configured agent skill directories
 - stores Git installs as immutable snapshots under `~/.local/share/skillyard`
@@ -171,6 +178,9 @@ skillyard discover github:lox/slack-cli
 skillyard discover github:lox/agent-skills --json
 skillyard discover ./repo --full-depth
 
+skillyard use github:lox/agent-skills --include check-pr-description
+skillyard use ./skills/review
+
 skillyard subscribe github:lox/slack-cli --dry-run
 skillyard subscribe github:lox/slack-cli
 skillyard subscribe github:lox/agent-skills --include '*'
@@ -208,6 +218,21 @@ skillyard discover ./repo --full-depth
 Use `--full-depth` when you want read-only inspection to find every nested `SKILL.md` under a source, not only the standard skill container layouts.
 
 `skillyard` also reads `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` when they declare explicit skill paths.
+
+### `use`
+
+Prints one selected skill's `SKILL.md` content to stdout without changing subscriptions, installed links, or the lockfile.
+
+```bash
+skillyard use <source> [--include <skill>]
+```
+
+If the source has exactly one discovered skill, `--include` can be omitted. If the source has zero or multiple matching skills, `use` fails with guidance to select exactly one skill.
+
+```bash
+skillyard use github:lox/agent-skills --include check-pr-description
+skillyard use ./skills/review
+```
 
 ### `subscribe`
 
