@@ -12,6 +12,7 @@ type SubscribeCmd struct {
 	Exclude []string `name:"exclude" help:"Skill name or glob pattern to exclude after includes."`
 	Target  []string `name:"target" help:"Target agent to install into. Defaults to all enabled configured agents."`
 	Name    string   `name:"name" help:"Override the generated source id."`
+	Ref     string   `name:"ref" help:"Git branch, tag, or commit to track."`
 	Force   bool     `name:"force" help:"Replace unmanaged symlinks and drifted managed links."`
 	DryRun  bool     `name:"dry-run" help:"Show the plan without changing links or lockfile."`
 	JSON    bool     `name:"json" help:"Emit machine-readable JSON."`
@@ -26,7 +27,7 @@ func (c SubscribeCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	ref, err := gitexec.Normalize(c.Source, c.Name)
+	ref, err := gitexec.NormalizeWithRef(c.Source, c.Name, c.Ref)
 	if err != nil {
 		return err
 	}

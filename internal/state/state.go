@@ -21,6 +21,7 @@ type Source struct {
 	Input          string `json:"input"`
 	Type           string `json:"type"`
 	URL            string `json:"url,omitempty"`
+	Ref            string `json:"ref,omitempty"`
 	CheckoutPath   string `json:"checkout_path,omitempty"`
 	LastSeenCommit string `json:"last_seen_commit,omitempty"`
 	InputPath      string `json:"input_path,omitempty"`

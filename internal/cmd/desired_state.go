@@ -110,6 +110,7 @@ func portableSource(src state.Source) state.Source {
 			Input: src.Input,
 			Type:  src.Type,
 			URL:   src.URL,
+			Ref:   src.Ref,
 		}
 	}
 	return src

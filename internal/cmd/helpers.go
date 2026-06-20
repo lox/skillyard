@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -116,16 +117,25 @@ func sourceFilter(lock state.Lock, input string) (string, error) {
 	if _, ok := lock.Sources[input]; ok {
 		return input, nil
 	}
+	var matches []string
 	for id, src := range lock.Sources {
 		if src.Input == input || src.URL == input {
-			return id, nil
+			matches = append(matches, id)
+			continue
 		}
 		if strings.HasPrefix(input, "github:") {
 			ref, err := gitexec.Normalize(input, "")
 			if err == nil && src.URL == ref.URL {
-				return id, nil
+				matches = append(matches, id)
 			}
 		}
+	}
+	if len(matches) == 1 {
+		return matches[0], nil
+	}
+	if len(matches) > 1 {
+		sort.Strings(matches)
+		return "", fmt.Errorf("source %q matches multiple source ids (%s); use the source id", input, strings.Join(matches, ", "))
 	}
 	return "", fmt.Errorf("source %q is not in the lockfile", input)
 }

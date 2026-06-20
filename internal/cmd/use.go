@@ -15,13 +15,14 @@ import (
 type UseCmd struct {
 	Source  string   `arg:"" help:"Git source or local path to inspect."`
 	Include []string `name:"include" help:"Skill name or glob pattern to use. Defaults to the only discovered skill when the source has exactly one."`
+	Ref     string   `name:"ref" help:"Git branch, tag, or commit to inspect."`
 }
 
 func (c UseCmd) Run(ctx *Context) error {
 	if err := ctx.ensurePaths(); err != nil {
 		return err
 	}
-	ref, err := gitexec.Normalize(c.Source, "")
+	ref, err := gitexec.NormalizeWithRef(c.Source, "", c.Ref)
 	if err != nil {
 		return err
 	}

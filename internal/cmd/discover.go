@@ -13,6 +13,7 @@ import (
 
 type DiscoverCmd struct {
 	Source    string `arg:"" help:"Git source or local path to inspect."`
+	Ref       string `name:"ref" help:"Git branch, tag, or commit to inspect."`
 	FullDepth bool   `name:"full-depth" help:"Search all subdirectories for SKILL.md files."`
 	JSON      bool   `name:"json" help:"Emit machine-readable JSON."`
 }
@@ -28,6 +29,7 @@ type discoverSourceOutput struct {
 	Input  string `json:"input"`
 	Type   string `json:"type"`
 	URL    string `json:"url,omitempty"`
+	Ref    string `json:"ref,omitempty"`
 	Root   string `json:"root"`
 	Commit string `json:"commit,omitempty"`
 }
@@ -46,7 +48,7 @@ func (c DiscoverCmd) Run(ctx *Context) error {
 	if err := ctx.ensurePaths(); err != nil {
 		return err
 	}
-	ref, err := gitexec.Normalize(c.Source, "")
+	ref, err := gitexec.NormalizeWithRef(c.Source, "", c.Ref)
 	if err != nil {
 		return err
 	}
@@ -72,6 +74,7 @@ func discoverResultOutput(result syncer.DiscoveryResult) discoverOutput {
 			Input:  result.Source.State.Input,
 			Type:   result.Source.Type,
 			URL:    result.Source.State.URL,
+			Ref:    result.Source.State.Ref,
 			Root:   result.Source.Root,
 			Commit: result.Source.Commit,
 		},
@@ -102,17 +105,18 @@ func printDiscover(ctx *Context, out discoverOutput) {
 	sourceRows := [][]string{{
 		out.Source.ID,
 		out.Source.Type,
+		dashIfEmpty(out.Source.Ref),
 		shortCommit(dashIfEmpty(out.Source.Commit)),
 		dashIfEmpty(out.Source.URL),
 		out.Source.Root,
 	}}
-	renderSectionTable(ctx.Out, styles, "Source", []string{"ID", "TYPE", "COMMIT", "URL", "ROOT"}, sourceRows, func(_ int, col int, value string) lipgloss.Style {
+	renderSectionTable(ctx.Out, styles, "Source", []string{"ID", "TYPE", "REF", "COMMIT", "URL", "ROOT"}, sourceRows, func(_ int, col int, value string) lipgloss.Style {
 		switch col {
-		case 0, 3:
+		case 0, 4:
 			return styles.info
-		case 2:
+		case 2, 3:
 			return mutedIfDash(styles, value)
-		case 4:
+		case 5:
 			return styles.muted
 		default:
 			return styles.cell

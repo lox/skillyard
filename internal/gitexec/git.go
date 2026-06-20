@@ -16,11 +16,16 @@ type SourceRef struct {
 	Input string
 	Type  string
 	URL   string
+	Ref   string
 	Path  string
 	ID    string
 }
 
 func Normalize(input string, explicitID string) (SourceRef, error) {
+	return NormalizeWithRef(input, explicitID, "")
+}
+
+func NormalizeWithRef(input string, explicitID string, gitRef string) (SourceRef, error) {
 	if input == "" {
 		return SourceRef{}, fmt.Errorf("source is required")
 	}
@@ -43,12 +48,21 @@ func Normalize(input string, explicitID string) (SourceRef, error) {
 		ref.Type = "local"
 		ref.Path = filepath.Clean(abs)
 	}
+	if gitRef != "" {
+		if ref.Type != "git" {
+			return SourceRef{}, fmt.Errorf("--ref is only supported for Git sources")
+		}
+		ref.Ref = gitRef
+	}
 	if explicitID != "" {
 		ref.ID = slug(explicitID)
 	} else if ref.Type == "local" {
 		ref.ID = localSourceID(ref.Path)
 	} else {
 		key := ref.URL
+		if ref.Ref != "" {
+			key = strings.TrimSuffix(ref.URL, ".git") + "#" + ref.Ref
+		}
 		ref.ID = sourceID(key)
 	}
 	return ref, nil
@@ -139,11 +153,18 @@ func (g Git) EnsureClone(url, path string) error {
 }
 
 func (g Git) Fetch(path string) error {
-	if _, err := g.run(path, "fetch", "--prune", "--tags"); err != nil {
-		return fmt.Errorf("fetch %s: %w", path, err)
+	if err := g.FetchRefs(path); err != nil {
+		return err
 	}
 	if _, err := g.run(path, "pull", "--ff-only"); err != nil {
 		return fmt.Errorf("fast-forward %s: %w", path, err)
+	}
+	return nil
+}
+
+func (g Git) FetchRefs(path string) error {
+	if _, err := g.run(path, "fetch", "--prune", "--tags"); err != nil {
+		return fmt.Errorf("fetch %s: %w", path, err)
 	}
 	return nil
 }
@@ -154,6 +175,37 @@ func (g Git) Head(path string) (string, error) {
 		return "", fmt.Errorf("resolve HEAD for %s: %w", path, err)
 	}
 	return strings.TrimSpace(out), nil
+}
+
+func (g Git) CheckoutRef(path, ref string) (string, error) {
+	commit, err := g.ResolveRef(path, ref)
+	if err != nil {
+		return "", err
+	}
+	if _, err := g.run(path, "checkout", "--detach", commit); err != nil {
+		return "", fmt.Errorf("checkout ref %s in %s: %w", ref, path, err)
+	}
+	return commit, nil
+}
+
+func (g Git) ResolveRef(path, ref string) (string, error) {
+	if ref == "" {
+		return g.Head(path)
+	}
+	candidates := []string{
+		"refs/remotes/origin/" + ref,
+		"refs/tags/" + ref,
+		ref,
+	}
+	var lastErr error
+	for _, candidate := range candidates {
+		out, err := g.run(path, "rev-parse", "--verify", candidate+"^{commit}")
+		if err == nil {
+			return strings.TrimSpace(out), nil
+		}
+		lastErr = err
+	}
+	return "", fmt.Errorf("resolve ref %s for %s: %w", ref, path, lastErr)
 }
 
 func (g Git) Snapshot(repoPath, commit, snapshotPath string) error {

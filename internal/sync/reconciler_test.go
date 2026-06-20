@@ -240,6 +240,53 @@ func TestSyncReportsGitCommitUpdates(t *testing.T) {
 	}
 }
 
+func TestSubscribeWithGitRefTracksPinnedBranch(t *testing.T) {
+	repo := makeGitRepo(t)
+	writeSkill(t, repo, "valid", "Pinned")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-m", "pinned")
+	git(t, repo, "branch", "pinned")
+	pinnedCommit := gitOutput(t, repo, "rev-parse", "pinned")
+
+	writeSkill(t, repo, "valid", "Default branch")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-m", "default-branch")
+	defaultCommit := gitOutput(t, repo, "rev-parse", "HEAD")
+	if pinnedCommit == defaultCommit {
+		t.Fatal("test setup did not create distinct commits")
+	}
+
+	env := testEnv(t)
+	ref, err := gitexec.NormalizeWithRef("file://"+repo, "", "pinned")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, _, err := env.Subscribe(state.NewLock(), ref, state.Selection{Include: []string{"valid"}}, []string{agent.Codex}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := installFor(t, lock, agent.Codex, "valid").SourceCommit; got != pinnedCommit {
+		t.Fatalf("installed commit=%s, want pinned branch commit %s", got, pinnedCommit)
+	}
+	if got := lock.Sources[ref.ID].Ref; got != "pinned" {
+		t.Fatalf("source ref=%q, want pinned", got)
+	}
+
+	git(t, repo, "checkout", "pinned")
+	writeSkill(t, repo, "valid", "Pinned changed")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-m", "pinned-changed")
+	nextPinnedCommit := gitOutput(t, repo, "rev-parse", "pinned")
+
+	lock, _, err = env.Sync(lock, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := installFor(t, lock, agent.Codex, "valid").SourceCommit; got != nextPinnedCommit {
+		t.Fatalf("synced commit=%s, want advanced pinned branch commit %s", got, nextPinnedCommit)
+	}
+}
+
 func TestSubscribeExcludeFiltersSelectedSkills(t *testing.T) {
 	root := t.TempDir()
 	writeSkill(t, root, "one", "One")
@@ -659,6 +706,17 @@ func git(t *testing.T, dir string, args ...string) {
 	if err != nil {
 		t.Fatalf("git %v failed: %v\n%s", args, err, out)
 	}
+}
+
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func installFor(t *testing.T, lock state.Lock, target, name string) state.Install {

@@ -23,6 +23,22 @@ func TestNormalizeGitHubShorthand(t *testing.T) {
 	}
 }
 
+func TestNormalizeGitRefChangesSourceID(t *testing.T) {
+	ref, err := NormalizeWithRef("github:lox/agent-skills", "", "v1.2.3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ref.Ref != "v1.2.3" {
+		t.Fatalf("ref=%q, want v1.2.3", ref.Ref)
+	}
+	if ref.ID == "github-com-lox-agent-skills-0ed5901f" {
+		t.Fatalf("pinned source id did not change: %q", ref.ID)
+	}
+	if !strings.Contains(ref.ID, "v1-2-3") {
+		t.Fatalf("id=%q, want ref hint", ref.ID)
+	}
+}
+
 func TestNormalizeExplicitID(t *testing.T) {
 	ref, err := Normalize("github:lox/agent-skills", "Lox Skills")
 	if err != nil {
@@ -30,6 +46,16 @@ func TestNormalizeExplicitID(t *testing.T) {
 	}
 	if ref.ID != "lox-skills" {
 		t.Fatalf("id=%q", ref.ID)
+	}
+}
+
+func TestNormalizeRefRejectsLocalPath(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "skills")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NormalizeWithRef(dir, "", "main"); err == nil {
+		t.Fatal("expected local path ref error")
 	}
 }
 
