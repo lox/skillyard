@@ -12,13 +12,13 @@ import (
 	syncer "github.com/lox/skillyard/internal/sync"
 )
 
-type UseCmd struct {
+type ShowCmd struct {
 	Source  string   `arg:"" help:"Git source or local path to inspect."`
-	Include []string `name:"include" help:"Skill name or glob pattern to use. Defaults to the only discovered skill when the source has exactly one."`
+	Include []string `name:"include" help:"Skill name or glob pattern to show. Defaults to the only discovered skill when the source has exactly one."`
 	Ref     string   `name:"ref" help:"Git branch, tag, or commit to inspect."`
 }
 
-func (c UseCmd) Run(ctx *Context) error {
+func (c ShowCmd) Run(ctx *Context) error {
 	if err := ctx.ensurePaths(); err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (c UseCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	selected, err := selectUseSkill(result.Skills, c.Include, result.Source.ID)
+	selected, err := selectShowSkill(result.Skills, c.Include, result.Source.ID)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (c UseCmd) Run(ctx *Context) error {
 	return err
 }
 
-func selectUseSkill(inspections []skill.Inspection, includes []string, sourceID string) (skill.Inspection, error) {
+func selectShowSkill(inspections []skill.Inspection, includes []string, sourceID string) (skill.Inspection, error) {
 	if len(inspections) == 0 {
 		return skill.Inspection{}, fmt.Errorf("source %s contains no skills", sourceID)
 	}
@@ -57,7 +57,7 @@ func selectUseSkill(inspections []skill.Inspection, includes []string, sourceID 
 		selected = append(selected, inspections[0])
 	} else {
 		for _, inspection := range inspections {
-			if matchesUseInclude(includes, inspection.Skill.Name) {
+			if matchesShowInclude(includes, inspection.Skill.Name) {
 				selected = append(selected, inspection)
 			}
 		}
@@ -74,7 +74,7 @@ func selectUseSkill(inspections []skill.Inspection, includes []string, sourceID 
 	return selected[0], nil
 }
 
-func matchesUseInclude(patterns []string, name string) bool {
+func matchesShowInclude(patterns []string, name string) bool {
 	for _, pattern := range patterns {
 		if ok, err := filepath.Match(pattern, name); err == nil && ok {
 			return true
