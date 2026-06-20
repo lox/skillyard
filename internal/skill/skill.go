@@ -20,6 +20,11 @@ type Skill struct {
 	Warnings    []Finding      `json:"warnings,omitempty"`
 }
 
+type Inspection struct {
+	Skill    Skill     `json:"skill"`
+	Findings []Finding `json:"findings,omitempty"`
+}
+
 type Finding struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -44,6 +49,49 @@ func Discover(root string) ([]Skill, error) {
 		return skills[i].Name < skills[j].Name
 	})
 	return skills, nil
+}
+
+func Inspect(root string) ([]Inspection, error) {
+	root = filepath.Clean(root)
+	candidates, err := candidates(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []Inspection
+	for _, candidate := range candidates {
+		s, err := Parse(root, candidate)
+		if err != nil {
+			rel, relErr := filepath.Rel(root, candidate)
+			if relErr != nil {
+				rel = filepath.Base(candidate)
+			}
+			out = append(out, Inspection{
+				Skill: Skill{
+					Name:     filepath.Base(candidate),
+					Path:     filepath.Clean(candidate),
+					RelPath:  filepath.ToSlash(rel),
+					Warnings: warnings(candidate),
+				},
+				Findings: []Finding{{
+					Code:    "invalid-skill",
+					Message: err.Error(),
+					Path:    filepath.Join(candidate, "SKILL.md"),
+				}},
+			})
+			continue
+		}
+		out = append(out, Inspection{
+			Skill:    s,
+			Findings: Validate(s),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Skill.Name != out[j].Skill.Name {
+			return out[i].Skill.Name < out[j].Skill.Name
+		}
+		return out[i].Skill.RelPath < out[j].Skill.RelPath
+	})
+	return out, nil
 }
 
 func candidates(root string) ([]string, error) {

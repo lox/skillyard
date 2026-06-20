@@ -33,6 +33,21 @@ type Result struct {
 	Lock     state.Lock      `json:"lock,omitempty"`
 }
 
+type DiscoveryResult struct {
+	Source   DiscoverySource    `json:"source"`
+	Skills   []skill.Inspection `json:"skills"`
+	Warnings []skill.Finding    `json:"warnings,omitempty"`
+}
+
+type DiscoverySource struct {
+	ID       string       `json:"id"`
+	State    state.Source `json:"state"`
+	Root     string       `json:"root"`
+	Snapshot string       `json:"snapshot,omitempty"`
+	Commit   string       `json:"commit,omitempty"`
+	Type     string       `json:"type"`
+}
+
 type Action struct {
 	Op     string `json:"op"`
 	Skill  string `json:"skill,omitempty"`
@@ -72,6 +87,38 @@ func (r Reconciler) Subscribe(lock state.Lock, ref gitexec.SourceRef, selection 
 		})
 	}
 	return r.Reconcile(lock, next, opts)
+}
+
+func (r Reconciler) Discover(ref gitexec.SourceRef) (DiscoveryResult, error) {
+	src, err := r.sourceState(ref, Options{})
+	if err != nil {
+		return DiscoveryResult{}, err
+	}
+	lock := state.NewLock()
+	state.UpsertSource(&lock, ref.ID, src.State)
+	state.UpsertSubscription(&lock, state.Subscription{
+		Source: ref.ID,
+		Selection: state.Selection{
+			Include: []string{"*"},
+		},
+	})
+	resolved, warnings, err := r.resolveSources(lock, Options{DryRun: true})
+	if err != nil {
+		return DiscoveryResult{}, err
+	}
+	source, ok := resolved[ref.ID]
+	if !ok {
+		return DiscoveryResult{}, fmt.Errorf("source %s was not resolved", ref.ID)
+	}
+	skills, err := skill.Inspect(source.Root)
+	if err != nil {
+		return DiscoveryResult{}, err
+	}
+	return DiscoveryResult{
+		Source:   DiscoverySource(source),
+		Skills:   skills,
+		Warnings: warnings,
+	}, nil
 }
 
 func (r Reconciler) Sync(lock state.Lock, opts Options) (state.Lock, Result, error) {
