@@ -181,6 +181,9 @@ skillyard discover ./repo --full-depth
 skillyard use github:lox/agent-skills --include check-pr-description
 skillyard use ./skills/review
 
+skillyard export --target codex > skillyard.lock.json
+skillyard apply skillyard.lock.json --target codex --dry-run
+
 skillyard subscribe github:lox/slack-cli --dry-run
 skillyard subscribe github:lox/slack-cli
 skillyard subscribe github:lox/agent-skills --include '*'
@@ -253,6 +256,24 @@ Useful flags:
 --dry-run            show the plan without changing links or lockfile
 --json               emit machine-readable output
 ```
+
+### `export` and `apply`
+
+Use `export` to write portable desired state for sources and subscriptions. Realized installs, snapshot paths, checkout paths, and last-seen commits are omitted.
+
+```bash
+skillyard export > skillyard.lock.json
+skillyard export --target codex > skillyard.lock.json
+```
+
+Use `apply` to reconcile the current machine to an exported desired-state file.
+
+```bash
+skillyard apply skillyard.lock.json --dry-run
+skillyard apply skillyard.lock.json --target codex
+```
+
+When `--target` is omitted, `apply` replaces all current subscriptions with the file's subscriptions. When `--target` is set, only that target's subscriptions are replaced; other targets are left alone.
 
 ### `list`
 
