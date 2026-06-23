@@ -108,6 +108,24 @@ func TestDiscoverPluginManifestSkills(t *testing.T) {
 	}
 }
 
+func TestDiscoverPluginManifestAcceptsStringSkillDirectory(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, filepath.Join(root, "plugin-skills", "one"), "one", "One")
+	writeTestSkill(t, filepath.Join(root, "plugin-skills", "two"), "two", "Two")
+	writeFile(t, filepath.Join(root, ".claude-plugin", "plugin.json"), `{
+  "name": "plugin",
+  "skills": "plugin-skills"
+}`)
+
+	skills, err := Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(skills) != 2 {
+		t.Fatalf("skills=%+v, want two plugin skill children", skills)
+	}
+}
+
 func TestDiscoverPluginManifestRejectsEscapingPath(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, ".codex-plugin", "plugin.json"), `{
@@ -126,7 +144,7 @@ func TestDiscoverPluginManifestRejectsEscapingPath(t *testing.T) {
 
 func TestDiscoverSingleSkillRoot(t *testing.T) {
 	root := t.TempDir()
-	writeTestSkill(t, root, filepath.Base(root), "Single")
+	writeTestSkill(t, root, "single", "Single")
 
 	skills, err := Discover(root)
 	if err != nil {
@@ -137,6 +155,14 @@ func TestDiscoverSingleSkillRoot(t *testing.T) {
 	}
 	if skills[0].RelPath != "." {
 		t.Fatalf("relpath=%q, want .", skills[0].RelPath)
+	}
+
+	inspections, err := Inspect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inspections) != 1 || len(inspections[0].Findings) != 0 {
+		t.Fatalf("inspections=%+v, want root skill without findings", inspections)
 	}
 }
 
@@ -163,6 +189,24 @@ func TestInspectReportsInvalidCandidates(t *testing.T) {
 	}
 	if inspections[1].Skill.Name != "valid" || len(inspections[1].Findings) != 0 {
 		t.Fatalf("valid inspection=%+v", inspections[1])
+	}
+}
+
+func TestWarningsIgnoreGitMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, root, "single", "Single")
+	hook := filepath.Join(root, ".git", "hooks", "pre-commit")
+	writeFile(t, hook, "#!/bin/sh\n")
+	if err := os.Chmod(hook, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	inspections, err := Inspect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inspections) != 1 || len(inspections[0].Skill.Warnings) != 0 {
+		t.Fatalf("warnings=%+v, want none from .git metadata", inspections)
 	}
 }
 

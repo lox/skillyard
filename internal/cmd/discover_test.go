@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lox/skillyard/internal/skill"
 )
 
 func TestDiscoverJSONReportsSkillsWithoutLockfile(t *testing.T) {
@@ -73,6 +75,18 @@ func TestDiscoverHumanOutputShowsInstallability(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Fatalf("stdout=%q, want %q", text, want)
 		}
+	}
+}
+
+func TestFindingCodesDeduplicatesCodes(t *testing.T) {
+	got := findingCodes([]skill.Finding{
+		{Code: "has-executable"},
+		{Code: "has-executable"},
+		{Code: "has-scripts"},
+		{Code: "has-executable"},
+	})
+	if got != "has-executable, has-scripts" {
+		t.Fatalf("findingCodes()=%q, want deduped codes", got)
 	}
 }
 

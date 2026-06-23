@@ -74,6 +74,77 @@ func TestSubscribeSyncUnsubscribeAndUnlink(t *testing.T) {
 	}
 }
 
+func TestSubscribeDoesNotResolveUnrelatedSources(t *testing.T) {
+	env := testEnv(t)
+	missing := filepath.Join(t.TempDir(), "missing")
+	lock := state.NewLock()
+	lock.Sources["broken"] = state.Source{
+		Input:        missing,
+		Type:         "local",
+		InputPath:    missing,
+		ResolvedPath: missing,
+	}
+	lock.Subscriptions = []state.Subscription{{
+		Source: "broken",
+		Target: agent.Codex,
+		Selection: state.Selection{
+			Include: []string{"missing"},
+			Exclude: []string{},
+		},
+	}}
+
+	source := t.TempDir()
+	writeSkill(t, source, "valid", "Valid")
+	ref, err := gitexec.Normalize(source, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	next, result, err := env.Subscribe(lock, ref, state.Selection{Include: []string{"valid"}}, []string{agent.Codex}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := next.Sources["broken"]; !ok {
+		t.Fatalf("unrelated source was dropped: %+v", next.Sources)
+	}
+	if len(next.Installs) != 1 || next.Installs[0].Skill != "valid" {
+		t.Fatalf("installs=%+v, want only new source install", next.Installs)
+	}
+	if len(result.Actions) != 1 || result.Actions[0].Op != "link" {
+		t.Fatalf("actions=%+v, want scoped link only", result.Actions)
+	}
+}
+
+func TestSubscribeRetargetsExistingSkillFromOtherSource(t *testing.T) {
+	env := testEnv(t)
+	first := t.TempDir()
+	writeSkill(t, first, "valid", "Valid")
+	firstRef, err := gitexec.Normalize(first, "first")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, _, err := env.Subscribe(state.NewLock(), firstRef, state.Selection{Include: []string{"valid"}}, []string{agent.Codex}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	second := t.TempDir()
+	writeSkill(t, second, "valid", "Valid")
+	secondRef, err := gitexec.Normalize(second, "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+	next, result, err := env.Subscribe(lock, secondRef, state.Selection{Include: []string{"valid"}}, []string{agent.Codex}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(next.Installs) != 1 || next.Installs[0].Source != "second" {
+		t.Fatalf("installs=%+v, want single retargeted install", next.Installs)
+	}
+	if len(result.Actions) != 1 || result.Actions[0].Op != "retarget" {
+		t.Fatalf("actions=%+v, want retarget", result.Actions)
+	}
+}
+
 func TestSubscribeDefaultsIncludeForSingleSkillSource(t *testing.T) {
 	root := t.TempDir()
 	writeSkill(t, root, "only", "Only")

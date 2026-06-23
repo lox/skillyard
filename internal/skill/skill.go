@@ -245,7 +245,7 @@ func manifestSkillCandidates(root string) ([]string, error) {
 }
 
 type pluginManifest struct {
-	Skills []string `json:"skills"`
+	Skills manifestSkillList `json:"skills"`
 }
 
 type marketplaceManifest struct {
@@ -256,8 +256,24 @@ type marketplaceManifest struct {
 }
 
 type marketplacePlugin struct {
-	Source string   `json:"source"`
-	Skills []string `json:"skills"`
+	Source string            `json:"source"`
+	Skills manifestSkillList `json:"skills"`
+}
+
+type manifestSkillList []string
+
+func (l *manifestSkillList) UnmarshalJSON(data []byte) error {
+	var values []string
+	if err := json.Unmarshal(data, &values); err == nil {
+		*l = values
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*l = []string{value}
+	return nil
 }
 
 func pluginManifestCandidates(root, path string) ([]string, error) {
@@ -307,7 +323,7 @@ func readJSONIfExists(path string, out any) (bool, error) {
 	return true, nil
 }
 
-func manifestSkillPaths(manifestPath, root, base string, values []string) ([]string, error) {
+func manifestSkillPaths(manifestPath, root, base string, values manifestSkillList) ([]string, error) {
 	var out []string
 	for _, value := range values {
 		rel, ok := safeRelativePath(value)
@@ -323,7 +339,13 @@ func manifestSkillPaths(manifestPath, root, base string, values []string) ([]str
 		}
 		if hasSkillMD(path) {
 			out = append(out, path)
+			continue
 		}
+		candidates, err := childSkillCandidates(path)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, candidates...)
 	}
 	return out, nil
 }
@@ -401,7 +423,7 @@ func Validate(s Skill) []Finding {
 	if s.Description == "" {
 		findings = append(findings, Finding{Code: "missing-description", Message: "SKILL.md frontmatter must include description", Path: s.Path})
 	}
-	if s.Name != "" && s.Name != base {
+	if s.Name != "" && s.RelPath != "." && s.Name != base {
 		findings = append(findings, Finding{Code: "name-mismatch", Message: fmt.Sprintf("skill name %q must match directory %q", s.Name, base), Path: s.Path})
 	}
 	return findings
@@ -442,7 +464,13 @@ func warnings(path string) []Finding {
 		findings = append(findings, Finding{Code: "has-scripts", Message: "skill contains scripts/", Path: filepath.Join(path, "scripts")})
 	}
 	_ = filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		info, err := d.Info()
