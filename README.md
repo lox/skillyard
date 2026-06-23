@@ -93,7 +93,7 @@ skillyard sync
 
 - reads skills from local paths, GitHub shorthand, HTTPS Git URLs, SSH Git URLs, and `file://` Git URLs
 - tracks a Git branch, tag, or commit when `--ref` is set
-- discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, `.claude/skills/<name>`, and plugin-declared skill paths
+- discovers skills at the source root, direct child directories, `skills/<name>`, `skills/<category>/<name>`, `.agents/skills/<name>`, `.claude/skills/<name>`, and plugin-declared skill paths or containers
 - inspects source skills, validation findings, and warnings without installing
 - prints a selected skill's `SKILL.md` without installing it
 - validates `SKILL.md` frontmatter before linking
@@ -234,7 +234,7 @@ skillyard discover github:lox/agent-skills --ref v1.2.3
 
 Use `--full-depth` when you want read-only inspection to find every nested `SKILL.md` under a source, not only the standard skill container layouts.
 
-`skillyard` also reads `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` when they declare explicit skill paths.
+`skillyard` also reads `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` when they declare skill paths or skill containers.
 
 Use `--ref` with Git sources to inspect a branch, tag, or commit instead of the remote default branch.
 

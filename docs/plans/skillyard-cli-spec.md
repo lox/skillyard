@@ -1,6 +1,6 @@
 ---
 status: implemented
-last_reviewed: 2026-06-20
+last_reviewed: 2026-06-23
 spec_refs:
   - https://github.com/vercel-labs/skills
   - https://www.npmjs.com/package/skills
@@ -153,11 +153,11 @@ Discovery rules:
 - The `skills/` child directory is treated as a skill container when present.
 - `skills/<category>/` child directories are treated as nested skill containers.
 - `.agents/skills/` and `.claude/skills/` are treated as skill containers when present.
-- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` can declare explicit skill paths.
+- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, and `.codex-plugin/marketplace.json` can declare skill paths or skill containers.
 - Hidden directories are ignored except the explicit `.agents/skills/` and `.claude/skills/` containers; `.git` is ignored.
 - `SKILL.md` must have YAML frontmatter.
 - Frontmatter must include `name` and `description`.
-- `name` must match the skill directory basename.
+- `name` must match the skill directory basename, except when the source root is the skill directory.
 
 Selected skills are blocked when:
 
@@ -364,7 +364,7 @@ slack  yes          skills/slack  -         has-scripts  Work with Slack message
 
 `discover --full-depth` recursively searches all subdirectories for `SKILL.md`, skipping `.git` and `node_modules`. It is intended for read-only inspection of unusual repositories; subscription reconciliation uses the standard discovery containers so desired state remains predictable.
 
-Plugin manifests are read from `.claude-plugin/` and `.codex-plugin/`. Single-plugin manifests may declare `skills`, and marketplace manifests may declare `metadata.pluginRoot`, `plugins[].source`, and `plugins[].skills`. Manifest-declared paths must stay inside the source root.
+Plugin manifests are read from `.claude-plugin/` and `.codex-plugin/`. Single-plugin manifests may declare `skills`, and marketplace manifests may declare `metadata.pluginRoot`, `plugins[].source`, and `plugins[].skills`. Manifest-declared paths and containers must stay inside the source root.
 
 ### `skillyard show`
 

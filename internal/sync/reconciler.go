@@ -92,6 +92,7 @@ func (r Reconciler) Subscribe(lock state.Lock, ref gitexec.SourceRef, selection 
 			Selection: selection,
 		})
 	}
+	opts.Source = ref.ID
 	return r.Reconcile(lock, next, opts)
 }
 
@@ -239,11 +240,11 @@ func (r Reconciler) Reconcile(oldLock, desiredLock state.Lock, opts Options) (st
 
 	next.Installs = nil
 	for _, existing := range oldLock.Installs {
-		if !inScope(existing, opts) {
-			next.Installs = append(next.Installs, existing)
+		if _, ok := desiredKey[installKey(existing)]; ok {
 			continue
 		}
-		if _, ok := desiredKey[installKey(existing)]; ok {
+		if !inScope(existing, opts) {
+			next.Installs = append(next.Installs, existing)
 			continue
 		}
 		if opts.DryRun {

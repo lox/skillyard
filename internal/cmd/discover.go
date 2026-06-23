@@ -159,7 +159,12 @@ func findingCodes(findings []skill.Finding) string {
 		return "-"
 	}
 	codes := make([]string, 0, len(findings))
+	seen := map[string]bool{}
 	for _, finding := range findings {
+		if seen[finding.Code] {
+			continue
+		}
+		seen[finding.Code] = true
 		codes = append(codes, finding.Code)
 	}
 	return strings.Join(codes, ", ")
