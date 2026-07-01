@@ -375,10 +375,14 @@ func pathInside(root, path string) bool {
 func appendCandidates(out *[]string, seen map[string]bool, candidates []string) {
 	for _, candidate := range candidates {
 		candidate = filepath.Clean(candidate)
-		if seen[candidate] {
+		key := candidate
+		if resolved, err := filepath.EvalSymlinks(candidate); err == nil {
+			key = resolved
+		}
+		if seen[key] {
 			continue
 		}
-		seen[candidate] = true
+		seen[key] = true
 		*out = append(*out, candidate)
 	}
 }
