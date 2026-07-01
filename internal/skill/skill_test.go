@@ -53,6 +53,28 @@ func TestDiscoverCatalogAndAgentSkillContainers(t *testing.T) {
 	}
 }
 
+func TestDiscoverDedupesSymlinkedSkillContainers(t *testing.T) {
+	root := t.TempDir()
+	writeTestSkill(t, filepath.Join(root, "skills", "o11ylite"), "o11ylite", "O11yLite")
+	if err := os.MkdirAll(filepath.Join(root, ".agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../skills", filepath.Join(root, ".agents", "skills")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	skills, err := Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(skills) != 1 {
+		t.Fatalf("skills=%+v, want one deduped skill", skills)
+	}
+	if skills[0].Name != "o11ylite" || skills[0].RelPath != "skills/o11ylite" {
+		t.Fatalf("skill=%+v, want o11ylite at skills/o11ylite", skills[0])
+	}
+}
+
 func TestDiscoverWithFullDepthFindsArbitraryNestedSkills(t *testing.T) {
 	root := t.TempDir()
 	writeTestSkill(t, filepath.Join(root, "examples", "deep", "demo"), "demo", "Demo")
